@@ -1,0 +1,26 @@
+{
+    "payloads": [
+        {
+            "mass": 12.1,
+            "dimensions": [
+                0.216,
+                0.216,
+                0.304
+            ],
+            "avgPower": 2.5,
+            "peakPower": 5.8,
+            "name": "multiscape200",
+            "tempRange": [
+                -10.0,
+                50.0
+            ],
+            "resolution": 0.618794418740825,
+            "FOV": 1.604177025611275,
+            "specRange": "VNIR",
+            "dataRate": 112.128
+        }
+    ],
+    "mission": {
+        "orbit": "GEO"
+    }
+}
