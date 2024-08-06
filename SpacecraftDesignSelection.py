@@ -46,26 +46,26 @@ def loadJSONSCDesign(jsonPath):
     ## Load spreadsheets containing component data
 
     # ADCS Components
-    reactionWheelData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Reaction Wheels')
-    CMGData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'CMG')
-    magnetorquerData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Magnetorquers')
-    starTrackerData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Star Trackers')
-    sunSensorData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Sun Sensors')
-    earthHorizonSensorData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Earth Horizon Sensors')
-    magnetometerData = pd.read_excel('Research/SpaDes/SCDesignData/ADCSData.xlsx', 'Magnetometers')
+    reactionWheelData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Reaction Wheels')
+    CMGData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'CMG')
+    magnetorquerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetorquers')
+    starTrackerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Star Trackers')
+    sunSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Sun Sensors')
+    earthHorizonSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Earth Horizon Sensors')
+    magnetometerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetometers')
 
     ADCSData = {"reaction wheel":reactionWheelData,"CMG":CMGData,"magnetorquer":magnetorquerData,"star tracker":starTrackerData,
                 "sun sensor":sunSensorData,"earth horizon sensor":earthHorizonSensorData,"magnetometer":magnetometerData}
 
     # Ground Station information
-    contacts = pd.read_excel('Research/SpaDes/SCDesignData/Ground Contacts.xlsx', 'Accesses')
-    downlink = pd.read_excel('Research/SpaDes/SCDesignData/Ground Contacts.xlsx', 'Downlink')
-    uplink = pd.read_excel('Research/SpaDes/SCDesignData/Ground Contacts.xlsx', 'Uplink')
+    contacts = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Accesses')
+    downlink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Downlink')
+    uplink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Uplink')
 
     GSData = {"contacts":contacts,"downlink":downlink,"uplink":uplink}
 
     # launch vehicle data
-    LVData = pd.read_excel('Research/SpaDes/SCDesignData/LaunchVehicleData.xlsx', 'Launch Vehicles')
+    LVData = pd.read_excel('SCDesignData/LaunchVehicleData.xlsx', 'Launch Vehicles')
 
 
     scMass, subsMass, components = iterativeDesign(payloads, mission, ADCSData, GSData, LVData)
@@ -151,7 +151,7 @@ def costEstimationJSON(payloads, mission, scMass, subsMass, components):
         }
         data["instruments"].append(instrument_data)
 
-    costEstJSONFilename = 'Research\SpaDes\spacecraftCostEstObject.json'
+    costEstJSONFilename = 'spacecraftCostEstObject.json'
     costEstJSON = json.dumps(data, indent=4)
     with open(costEstJSONFilename, 'w') as jsonFile:
         jsonFile.write(costEstJSON)

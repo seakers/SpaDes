@@ -68,7 +68,7 @@ rand = np.random.default_rng()
 
 ## Load all the component catalogs
 # Payloads
-cameraData = pd.read_excel('Research/SpaDes/SCDesignData/PayloadData.xlsx', 'Cameras')
+cameraData = pd.read_excel('SCDesignData/PayloadData.xlsx', 'Cameras')
 
 payloadData = {"camera":cameraData}
 
@@ -82,12 +82,12 @@ SCDesignDict = {
 
 # Save to JSON
 SCDesingJSON = json.dumps(SCDesignDict, indent=4)
-with open("Research\SpaDes\spacecraftDesignCallObject" + ".json", "w") as outfile:
+with open("spacecraftDesignCallObject" + ".json", "w") as outfile:
       outfile.write(SCDesingJSON)
 
 
 # Call loadJSONSCDesign from SpacecraftDesignSelection.py
-scMass, subsMass, components, costEstimationJSONFile = loadJSONSCDesign("Research\SpaDes\spacecraftDesignCallObject.json")
+scMass, subsMass, components, costEstimationJSONFile = loadJSONSCDesign("spacecraftDesignCallObject.json")
 
 print("\nFinal Mass: ",scMass)
 print("Propulsion Mass: ",subsMass["Propulsion Mass"]," (",subsMass["Propulsion Mass"]/scMass*100,"%)")

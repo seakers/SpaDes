@@ -1,23 +1,23 @@
 {
     "payloads": [
         {
-            "mass": 12.1,
+            "mass": 1.75,
             "dimensions": [
-                0.216,
-                0.216,
-                0.304
+                0.165,
+                0.178,
+                0.152
             ],
-            "avgPower": 2.5,
-            "peakPower": 5.8,
-            "name": "multiscape200",
+            "avgPower": 60.0,
+            "peakPower": 60.0,
+            "name": "4K space camera",
             "tempRange": [
                 -10.0,
                 50.0
             ],
-            "resolution": 0.618794418740825,
-            "FOV": 1.604177025611275,
-            "specRange": "VNIR",
-            "dataRate": 112.128
+            "resolution": 70.3125,
+            "FOV": 80.0,
+            "specRange": "Visible",
+            "dataRate": 102400.0
         }
     ],
     "mission": {

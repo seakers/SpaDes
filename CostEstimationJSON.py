@@ -78,8 +78,8 @@ data = {
     }
 }
 
-with open('Research\SpaDes\spacecraftCostEstObject.json', 'w') as file:
+with open('spacecraftCostEstObject.json', 'w') as file:
     json.dump(data, file)
 
-mission = loadJSONCostEstimation('Research\SpaDes\spacecraftCostEstObject.json')
+mission = loadJSONCostEstimation('spacecraftCostEstObject.json')
 

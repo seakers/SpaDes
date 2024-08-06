@@ -1,22 +1,22 @@
 {
-    "satelliteDryMass": 33.567504415099656,
-    "structureMass": 8.127295019397474,
-    "propulsionMass": 1.4048302856048225,
-    "ADCSMass": 1.1440000000000001,
-    "avionicsMass": 1.3433545486607394,
-    "thermalMass": 2.038540527592672,
-    "EPSMass": 3.5892353309421465,
-    "satelliteBOLPower": 37.13653328382624,
-    "satDataRatePerOrbit": 112.128,
+    "satelliteDryMass": 10.599907296597706,
+    "structureMass": 2.5636656703406997,
+    "propulsionMass": 0.4431382356939476,
+    "ADCSMass": 0.34600000000000003,
+    "avionicsMass": 0.42374639179185125,
+    "thermalMass": 0.6430351495441342,
+    "EPSMass": 3.8184486533311484,
+    "satelliteBOLPower": 45.906784686648685,
+    "satDataRatePerOrbit": 102400.0,
     "lifetime": 5,
     "numPlanes": 1,
     "numSats": 1,
     "instruments": [
         {
             "trl": 9,
-            "mass": 12.1,
-            "avgPower": 12.1,
-            "dataRate": 112.128
+            "mass": 1.75,
+            "avgPower": 1.75,
+            "dataRate": 102400.0
         }
     ],
     "launchVehicle": {
