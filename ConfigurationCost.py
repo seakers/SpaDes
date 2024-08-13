@@ -71,64 +71,119 @@ def overlapCost(dimensions,locations):
 
     return overlap
 
-def wireCost(locations,types):
+def wireCost(dimensions,locations,types,orientations):
     # Extra cost from wires from here https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Customer+Drawing%7F10614%7FK%7Fpdf%7FEnglish%7FENG_CD_10614_K.pdf%7F865042-004
     # using manhattan distance for each component from pcu
+    # setting the ports to be in the center of the -x face of each component
+    portDirBase = np.array([-1,0,0])
     PCUInd = types.index("PCU")
     PCULoc = locations[PCUInd]
+    PCUPortDir = np.matmul(orientations[PCUInd],portDirBase)
+    PCUPortLoc = np.array(PCULoc) + np.multiply(np.array(dimensions[PCUInd])/2,PCUPortDir)
     totWireLen = 0
-    for loc in locations:
-        wireLen = np.abs(PCULoc[0]-loc[0]) + np.abs(PCULoc[1]-loc[1]) + np.abs(PCULoc[2]-loc[2])
+    for ind,loc in enumerate(locations):
+        portDir = np.matmul(orientations[ind],portDirBase)
+        compPortLoc = np.array(loc) + np.multiply(np.array(dimensions[ind])/2,portDir)
+        wireLen = np.abs(PCUPortLoc[0]-compPortLoc[0]) + np.abs(PCUPortLoc[1]-compPortLoc[1]) + np.abs(PCUPortLoc[2]-compPortLoc[2])
         totWireLen += wireLen
 
     return totWireLen
 
-def thermalCost(locations,heatDisps):
-    # Assumes direct line of conduction for the heat transfer between components
-    compPairList = itertools.combinations(range(len(heatDisps)))
+def thermalCost(dimensions,locations,heatDisps):
+    # Assumes just radiation heat transfer between components
+    # Score is the variance of Qnet bc we want uniform heat distribution
+    Qin = np.zeros(len(locations))
+
+    SA = np.zeros(len(dimensions))
+    for ind,dims in enumerate(dimensions):
+        SA[ind] = 2*(dims[0]*dims[1] + dims[0]*dims[2] + dims[1]*dims[2])
+
+    compPairList = itertools.combinations(range(len(locations)),2)
     for pair in compPairList:
-        x=1
-    return 1
+        locA = locations[pair[0]]
+        locB = locations[pair[1]]
+        SAA = SA[pair[0]]
+        SAB = SA[pair[1]]
+        heatDispsA = heatDisps[pair[0]]
+        heatDispsB = heatDisps[pair[1]]
+        r = np.sqrt((locA[0]-locB[0])**2 + (locA[1]-locB[1])**2 + (locA[2]-locB[2])**2)
+        distanceSphere = 4*np.pi*r**2
+        # calculate the Heat transfer. Assumes constant heat production (questionable assumption)
+        # 1/4 SA is the average cross sectional area of any 3d shape. 4*pi*r^2 is the surface area of the sphere
+        # of radius r from the dissipating component
+        if SAA < distanceSphere:
+            Qin[pair[0]] += 1/4*SAA*heatDispsB/(distanceSphere)
+        else:
+            Qin[pair[0]] += heatDispsB
+
+        if SAB < distanceSphere:
+            Qin[pair[1]] += 1/4*SAB*heatDispsA/(distanceSphere)
+        else:
+            Qin[pair[1]] += heatDispsA
+
+
+    Qnet = Qin - np.array(heatDisps)
+    QnetVar = np.var(Qnet)
+
+    return QnetVar
 
 def vibrationsCost(dimensions,locations):
     
     return 1
 
-def maxEstimatedCosts(dimensions,masses,types,heatDisps):
+def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations):
     maxOverlapCost = overlapCost(dimensions,[[0,0,0]]*len(dimensions)) # all comps in center
+
     maxCmCost = centerMassCost(dimensions,[[1,1,1]]*len(dimensions),masses) # all comps in corner
+
     maxOffAxisInertia,maxOnAxisInertia = inertiaCost(dimensions,[[1,1,1]]*len(dimensions),masses) # all comps in corner
+
     wireLocs = [[1,1,1]]*len(dimensions)
     PCUInd = types.index("PCU")
     wireLocs[PCUInd] = [-1,-1,-1]
-    maxWireCost = wireCost(wireLocs,types) # all comps in opposite corner of PCU
-    # maxThermalCost = thermalCost([[0,0,0]]*len(dimensions),heatDisps) # all comps in center
-    # return [maxOverlapCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost,maxThermalCost]
-    return [maxOverlapCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost]
+    maxWireCost = wireCost(dimensions,wireLocs,types,orientations) # all comps in opposite corner of PCU
 
+    thermLocs = [[1,1,1]]*len(dimensions)
+    altCorners = [[-1,-1,-1],[-1,-1,1],[-1,1,-1],[1,-1,-1],[-1,1,1],[1,-1,1],[1,1,-1]]
+    sortHeats = sorted(heatDisps)
+    heatCutoff = sortHeats[6]
+    for i,heat in enumerate(heatDisps):
+        if heat <= heatCutoff:
+            thermLocs[i] = altCorners.pop()
+    maxThermalCost = thermalCost(dimensions,thermLocs,heatDisps) # all comps in center
 
-# def getMaxCosts(components):
-#     # pull parameters from the components
-#     dimensions = []
-#     types = []
-#     masses = []
-#     for comp in components:
-#         dimensions.append(comp.dimensions)
-#         types.append(comp.type)
-#         masses.append(comp.mass)
+    return [maxOverlapCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost,maxThermalCost]
 
-#     return maxEstimatedCosts(dimensions,masses,types)
-
-def getCostComps(components):
+def maxCostComps(components):
     # pull parameters from the components
-    locations = []
     dimensions = []
     types = []
     masses = []
     heatDisps = []
     for comp in components:
+        dimensions.append(np.matmul(np.abs(comp.orientation),comp.dimensions))
+        types.append(comp.type)
+        masses.append(comp.mass)
+        heatDisps.append(comp.heatDisp)
+
+    orientations = [np.array([[1,0,0],[0,1,0],[0,0,1]])]*len(components)
+
+    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations)
+
+    return [maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal]
+
+def getCostComps(components, maxCosts):
+    # pull parameters from the components
+    locations = []
+    dimensions = []
+    orientations = []
+    types = []
+    masses = []
+    heatDisps = []
+    for comp in components:
         locations.append(comp.location)
-        dimensions.append(comp.dimensions)
+        orientations.append(comp.orientation)
+        dimensions.append(np.matmul(np.abs(comp.orientation),comp.dimensions))
         types.append(comp.type)
         masses.append(comp.mass)
         heatDisps.append(comp.heatDisp)
@@ -137,31 +192,11 @@ def getCostComps(components):
     overlapCostVal = overlapCost(dimensions,locations)
     cmCostCalVal = centerMassCost(dimensions,locations,masses)
     offAxisInertia,onAxisInertia = inertiaCost(dimensions,locations,masses)
-    wireCostVal = wireCost(locations,types)
-    # thermalCostVal = thermalCost(locations, heatDisps)
+    wireCostVal = wireCost(dimensions,locations,types,orientations)
+    thermalCostVal = thermalCost(dimensions,locations,heatDisps)
 
-    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire = maxEstimatedCosts(dimensions,masses,types,heatDisps)
-    # maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps)
+    # maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire = maxEstimatedCosts(dimensions,masses,types,heatDisps)
+    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxCosts
 
-    # Add all the costs together
-    # In the future add weights for different costs
-    # costList = [overlapCostVal*100, cmCostCalVal*10, offAxisInertia, onAxisInertia*0.1, wireCostVal]
-    # costList = [overlapCostVal/maxOverlap*100, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
-    costList = [overlapCostVal/maxOverlap*100, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire]
+    costList = [overlapCostVal/maxOverlap*100, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
     return costList
-
-# def getCostParams(dimensions,locations,types,masses):
-#     # Get the cost from each cost source
-#     # Only needed for gradient method (for some reason?)
-#     overlapCostVal = overlapCost(dimensions,locations)
-#     cmCostCalVal = centerMassCost(dimensions,locations,masses)
-#     offAxisInertia,onAxisInertia = inertiaCost(dimensions,locations,masses)
-#     wireCostVal = wireCost(locations,types)
-
-#     # maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire = maxEstimatedCosts(dimensions,masses,types)
-
-#     # Add all the costs together
-#     # In the future add weights for different costs
-#     costList = [overlapCostVal*100, cmCostCalVal*10, offAxisInertia, onAxisInertia*0.1, wireCostVal]
-#     # costList = [overlapCostVal/maxOverlap, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire]
-#     return costList

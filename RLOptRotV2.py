@@ -20,7 +20,7 @@ class Actor(tf.keras.Model):
         super().__init__(**kwargs)
         self.num_components = num_components
         self.state_dim = self.num_components * 4  # 60 vars (x, y, z, rot) * components
-        self.position_actions = 100 # one spot for every 2 cm
+        self.position_actions = 51 # one spot for every 4 cm
         self.rotation_actions = 6 # 6 possible right angle orientations
         self.a_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002)
 
@@ -172,7 +172,7 @@ class Critic(tf.keras.Model):
 class RLWrapper():
 
     @staticmethod
-    def run(components):
+    def run(components,maxCosts):
         epochs = 1500
         num_components = len(components)
         actor, critic = get_models(num_components)
@@ -191,7 +191,7 @@ class RLWrapper():
 
         for x in range(epochs):
             print("Epoch: ", x)
-            locs,dims,cost,c_loss,loss,kl,NFE = run_epoch(actor, critic, components,NFE)
+            locs,dims,cost,c_loss,loss,kl,NFE = run_epoch(actor, critic, components, NFE, maxCosts)
             allLocs.append(locs[0]) # Just first design of each minibatch
             allDims.append(dims[0])
             cost = np.array(cost)
@@ -267,7 +267,7 @@ def get_models(num_components):
     return actor, critic
 
 
-def run_epoch(actor, critic, components, NFE):
+def run_epoch(actor, critic, components, NFE, maxCosts):
     mini_batch_size = 128
     num_actions = len(components) * 4
 
@@ -291,7 +291,7 @@ def run_epoch(actor, critic, components, NFE):
         sel_actions = sel_actions.numpy().tolist()
         for idx, action in enumerate(sel_actions):
             if rot == 0:
-                coords = np.linspace(-1, 1, 101)
+                coords = np.linspace(-1, 1, 51)
                 coord_selected = coords[action]
                 designs[idx].append(coord_selected)
                 observation[idx].append(coord_selected)
@@ -336,7 +336,7 @@ def run_epoch(actor, critic, components, NFE):
             desLocs.append(locs)
             desDims.append(dims)
 
-        costVals = getCostComps(components)
+        costVals = getCostComps(components,maxCosts)
         NFE += 1
         adjustCostVals = []
         for costVal in costVals:

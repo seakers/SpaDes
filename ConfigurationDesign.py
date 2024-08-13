@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from ConfigurationOptimization import *
 from SCDesignClasses import Component
+from ConfigurationCost import maxCostComps
 
 def getCube(dimensions,location):
     # Function to transform cube dimensions and location into a form that plot_surface can plot
@@ -37,22 +38,23 @@ def updatePlot(num,allDimensions,allLocations):
 # by Fakoor
 
 componentList = [
-    Component("battery",8,[.25,.2,.15],heatDisp=2),
-    Component("reaction wheel",2,[.075,.240,.240],heatDisp=2),
-    Component("reaction wheel",2,[.075,.240,.240],heatDisp=2),
-    Component("reaction wheel",2,[.075,.240,.240],heatDisp=2),
-    Component("gyro",3,[.1876,.1239,.0015],heatDisp=2.5),
-    Component("gyro",3,[.1876,.1239,.0015],heatDisp=2.5),
-    Component("transmitter",4.5,[.25,.15,.05],heatDisp=12),
-    Component("transmitter",3.5,[.2,.1,.05],heatDisp=10),
-    Component("reciever",4,[.2,.15,.03],heatDisp=11),
-    Component("reciever",3,[.175,.125,.03],heatDisp=9),
-    Component("PCU",7,[.3,.2,.15],heatDisp=7),
-    Component("OBDH",9,[.24,.18,.18],heatDisp=6),
-    Component("magnetometer",1.5,[.15,.12,.04],heatDisp=1.5),
-    Component("magnetometer",1.5,[.15,.12,.04],heatDisp=1.5),
-    Component("magnetometer",1.5,[.15,.12,.04],heatDisp=1.5),
+    Component(type="battery", mass=8, dimensions=[.25,.2,.15], heatDisp=2),
+    Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
+    Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
+    Component(type="transmitter", mass=4.5, dimensions=[.25,.15,.05], heatDisp=12),
+    Component(type="transmitter", mass=3.5, dimensions=[.2,.1,.05], heatDisp=10),
+    Component(type="reciever", mass=4, dimensions=[.2,.15,.03], heatDisp=11),
+    Component(type="reciever", mass=3, dimensions=[.175,.125,.03], heatDisp=9),
+    Component(type="PCU", mass=7, dimensions=[.3,.2,.15], heatDisp=7),
+    Component(type="OBDH", mass=9, dimensions=[.24,.18,.18], heatDisp=6),
+    Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
     ]
+
 
 numComps = len(componentList)
 compLocs = np.ndarray.tolist(np.random.normal(0,0.4,(numComps,3)))
@@ -60,11 +62,15 @@ compDims = []
 i = 0
 for comp in componentList:
     comp.location = compLocs[i]
+    comp.orientation = np.eye(3)
     compDims.append(comp.dimensions)
     i+=1
 
+# calculate here so it is only done once (for speed)
+maxCostList = maxCostComps(componentList)
+
 # Optimize
-numRuns = 20
+numRuns = 1
 
 # Genetic Algorithm
 # t00 = time.time()
@@ -72,7 +78,7 @@ allHVGA = []
 allMaxHVGA = []
 for runGA in range(numRuns):
     print("RUN: ", runGA, "\n\n")
-    allLocsGA, allDimsGA, numStepsGA, maxHyperVolumeGA, allHyperVolumeGA = optimization(componentList,"GA")
+    allLocsGA, allDimsGA, numStepsGA, maxHyperVolumeGA, allHyperVolumeGA = optimization(componentList,maxCostList,"GA")
     allMaxHVGA.append(maxHyperVolumeGA)
     allHVGA.append(allHyperVolumeGA)
 # t01 = time.time()
@@ -89,7 +95,7 @@ allHVRL = []
 allMaxHVRL = []
 for runRL in range(numRuns):
     print("RUN: ", runRL, "\n\n")
-    allLocsRL, allDimsRL, numStepsRL, maxHyperVolumeRL, allHyperVolumeRL = optimization(componentList,"RL")
+    allLocsRL, allDimsRL, numStepsRL, maxHyperVolumeRL, allHyperVolumeRL = optimization(componentList,maxCostList,"RL")
     allMaxHVRL.append(maxHyperVolumeRL)
     allHVRL.append(allHyperVolumeRL)
 # t11 = time.time()
