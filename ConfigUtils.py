@@ -64,8 +64,8 @@ def getOrientation(orientationChoice):
 
     return transMat
 
-transMat = getOrientation(5)
-dims = np.array([1,2,3])
-newDims = np.matmul(np.abs(transMat),dims)
-print(transMat)
-print(newDims)
+# transMat = getOrientation(5)
+# dims = np.array([1,2,3])
+# newDims = np.matmul(np.abs(transMat),dims)
+# print(transMat)
+# print(newDims)

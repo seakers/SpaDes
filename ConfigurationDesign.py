@@ -16,22 +16,22 @@ def getCube(dimensions,location):
     z = np.cos(Theta)/np.sqrt(2) * dimensions[2] + location[2]
     return x,y,z
 
-def updatePlot(num,allDimensions,allLocations):
-    # Function to update the plot for animation
+# def updatePlot(num,allDimensions,allLocations):
+#     # Function to update the plot for animation
 
-    # Clear the plot
-    ax2.cla()
+#     # Clear the plot
+#     ax2.cla()
 
-    # Creating and plotting elements
-    for i in range(len(allDimensions[0])):
-        x,y,z = getCube(allDimensions[num][i],allLocations[num][i])
-        ax2.plot_surface(x, y, z)
+#     # Creating and plotting elements
+#     for i in range(len(allDimensions[0])):
+#         x,y,z = getCube(allDimensions[num][i],allLocations[num][i])
+#         ax2.plot_surface(x, y, z)
 
-    # Readjust plot
-    ax2.set_xlim(-1,1)
-    ax2.set_ylim(-1,1)
-    ax2.set_zlim(-1,1)
-    ax2.set_aspect('equal')
+#     # Readjust plot
+#     ax2.set_xlim(-1,1)
+#     ax2.set_ylim(-1,1)
+#     ax2.set_zlim(-1,1)
+#     ax2.set_aspect('equal')
 
 # Create Components to put in spacecraft. Same as ones used in 
 # Spacecraft Component Adaptive Layout Environment (SCALE): An efficient optimization tool
@@ -70,7 +70,7 @@ for comp in componentList:
 maxCostList = maxCostComps(componentList)
 
 # Optimize
-numRuns = 1
+numRuns = 20
 
 # Genetic Algorithm
 # t00 = time.time()
@@ -85,41 +85,42 @@ for runGA in range(numRuns):
 # print("Time for RL2: ", (t01-t00)/numRuns)
 
 # Reset locations and dimensions for Reinforcement Learning
-i = 0
-for comp in componentList:
-    comp.location = compLocs[i]
-    comp.dimensions = compDims[i]
-    i+=1
-# t10 = time.time()
-allHVRL = []
-allMaxHVRL = []
-for runRL in range(numRuns):
-    print("RUN: ", runRL, "\n\n")
-    allLocsRL, allDimsRL, numStepsRL, maxHyperVolumeRL, allHyperVolumeRL = optimization(componentList,maxCostList,"RL")
-    allMaxHVRL.append(maxHyperVolumeRL)
-    allHVRL.append(allHyperVolumeRL)
+# i = 0
+# for comp in componentList:
+#     comp.location = compLocs[i]
+#     comp.dimensions = compDims[i]
+#     i+=1
+# # t10 = time.time()
+# allHVRL = []
+# allMaxHVRL = []
+# for runRL in range(numRuns):
+#     print("RUN: ", runRL, "\n\n")
+#     allLocsRL, allDimsRL, numStepsRL, maxHyperVolumeRL, allHyperVolumeRL = optimization(componentList,maxCostList,"RL")
+#     allMaxHVRL.append(maxHyperVolumeRL)
+#     allHVRL.append(allHyperVolumeRL)
 # t11 = time.time()
 # print("Time for RLE: ", (t11-t10)/numRuns)
 
 allMaxHVGA = np.array(allMaxHVGA)
-allMaxHVRL = np.array(allMaxHVRL)
+# allMaxHVRL = np.array(allMaxHVRL)
 bigMaxHVGA = np.max(allMaxHVGA,axis=0)
-bigMaxHVRL = np.max(allMaxHVRL,axis=0)
+# bigMaxHVRL = np.max(allMaxHVRL,axis=0)
 allHVGA = np.array(allHVGA)
-allHVRL = np.array(allHVRL)
+# allHVRL = np.array(allHVRL)
 meanHVGA = np.mean(allHVGA,0)
-meanHVRL = np.mean(allHVRL,0)
+# meanHVRL = np.mean(allHVRL,0)
 stdHVGA = np.std(allHVGA,0)
-stdHVRL = np.std(allHVRL,0)
+# stdHVRL = np.std(allHVRL,0)
 
 plt.plot(meanHVGA,color='tab:blue')
-plt.plot(meanHVRL,color='tab:orange')
-plt.plot(bigMaxHVGA,color='tab:blue',linestyle='dashed')
-plt.plot(bigMaxHVRL,color='tab:orange',linestyle='dashed')
+# plt.plot(meanHVRL,color='tab:orange')
+# plt.plot(bigMaxHVGA,color='tab:blue',linestyle='dashed')
+# plt.plot(bigMaxHVRL,color='tab:orange',linestyle='dashed')
 plt.fill_between(range(len(meanHVGA)), meanHVGA + stdHVGA, meanHVGA - stdHVGA, alpha=.5, linewidth=0, color='tab:blue')
-plt.fill_between(range(len(meanHVRL)), meanHVRL + stdHVRL, meanHVRL - stdHVRL, alpha=.5, linewidth=0, color='tab:orange')
-plt.legend(["Average Hypervolume Genetic Algorithm","Average Hypervolume Deep RL",
-            "Maximum Hypervolume Genetic Algorithm","Maximum Hypervolume Deep RL"],loc="upper left")
+# plt.fill_between(range(len(meanHVRL)), meanHVRL + stdHVRL, meanHVRL - stdHVRL, alpha=.5, linewidth=0, color='tab:orange')
+# plt.legend(["Average Hypervolume Genetic Algorithm","Average Hypervolume Deep RL",
+#             "Maximum Hypervolume Genetic Algorithm","Maximum Hypervolume Deep RL"],loc="upper left")
+plt.legend(["Average Hypervolume Genetic Algorithm"],loc="upper left")
 plt.xlabel("Number of Function Evaluations")
 plt.ylabel("Hypervolume")
 plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
@@ -145,19 +146,19 @@ for i in range(len(componentList)):
 plt.title("Visualization of Configuration GA")
 
 
-fig2 = plt.figure()
-ax2 = fig2.add_subplot(111, projection='3d')
+# fig2 = plt.figure()
+# ax2 = fig2.add_subplot(111, projection='3d')
 
-ax2.set_xlim(-1,1)
-ax2.set_ylim(-1,1)
-ax2.set_zlim(-1,1)
-ax2.set_aspect('equal')
+# ax2.set_xlim(-1,1)
+# ax2.set_ylim(-1,1)
+# ax2.set_zlim(-1,1)
+# ax2.set_aspect('equal')
 
-for i in range(len(componentList)):
-    # x,y,z = get_cube(component.dimensions,component.location)
-    xRL,yRL,zRL = getCube(allDimsRL[-1][i],allLocsRL[-1][i])
-    plot2 = ax2.plot_surface(xRL,yRL,zRL)
-plt.title("Visualization of Configuration Deep RL")
+# for i in range(len(componentList)):
+#     # x,y,z = get_cube(component.dimensions,component.location)
+#     xRL,yRL,zRL = getCube(allDimsRL[-1][i],allLocsRL[-1][i])
+#     plot2 = ax2.plot_surface(xRL,yRL,zRL)
+# plt.title("Visualization of Configuration Deep RL")
 
 # if numStepsGA > 0:
 #     ani = animation.FuncAnimation(fig2, updatePlot, numStepsGA, fargs=(allDimsGA, allLocsGA))
