@@ -53,8 +53,17 @@ componentList = [
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
-    ]
+]
 
+structPanelList = [
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,0,.5], orientation=getOrientation(0)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,0,-.5], orientation=getOrientation(1)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,.5,0], orientation=getOrientation(22)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,-.5,0], orientation=getOrientation(23)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[.5,0,0], orientation=getOrientation(16)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[-.5,0,0], orientation=getOrientation(18)),
+] # orientations chosen manually so that the positive z normal (on dimensions array) is facing outwards. Components are placed on the +- z face of the panels
+  # surfaceNormal is the normal of the face that the component is placed on, relative to the dimensions, not the orientation (aka will be changed by the orientation)
 
 numComps = len(componentList)
 compLocs = np.ndarray.tolist(np.random.normal(0,0.4,(numComps,3)))
@@ -67,7 +76,7 @@ for comp in componentList:
     i+=1
 
 # calculate here so it is only done once (for speed)
-maxCostList = maxCostComps(componentList)
+maxCostList = maxCostComps(componentList,structPanelList)
 
 # Optimize
 numRuns = 20
@@ -75,12 +84,10 @@ numRuns = 20
 # Genetic Algorithm
 # t00 = time.time()
 allHVGA = []
-allMaxHVGA = []
 for runGA in range(numRuns):
-    print("RUN: ", runGA, "\n\n")
-    allLocsGA, allDimsGA, numStepsGA, maxHyperVolumeGA, allHyperVolumeGA = optimization(componentList,maxCostList,"GA")
-    allMaxHVGA.append(maxHyperVolumeGA)
-    allHVGA.append(allHyperVolumeGA)
+    print("\n\n\nRUN: ", runGA, "\n\n")
+    numStepsGA, allHVGARun, pfSolutionsGA, pfCostsGA = optimization(componentList,structPanelList,maxCostList,"GA")
+    allHVGA.append(allHVGARun)
 # t01 = time.time()
 # print("Time for RL2: ", (t01-t00)/numRuns)
 
@@ -101,30 +108,59 @@ for runGA in range(numRuns):
 # t11 = time.time()
 # print("Time for RLE: ", (t11-t10)/numRuns)
 
-allMaxHVGA = np.array(allMaxHVGA)
-# allMaxHVRL = np.array(allMaxHVRL)
-bigMaxHVGA = np.max(allMaxHVGA,axis=0)
-# bigMaxHVRL = np.max(allMaxHVRL,axis=0)
 allHVGA = np.array(allHVGA)
 # allHVRL = np.array(allHVRL)
-meanHVGA = np.mean(allHVGA,0)
+medianHVGA = np.median(allHVGA,0)
 # meanHVRL = np.mean(allHVRL,0)
-stdHVGA = np.std(allHVGA,0)
+q1HVGA = np.quantile(allHVGA,.25,axis=0)
+q3HVGA = np.quantile(allHVGA,.75,axis=0)
+maxHVGA = np.max(allHVGA,0)
+minHVGA = np.min(allHVGA,0)
 # stdHVRL = np.std(allHVRL,0)
 
-plt.plot(meanHVGA,color='tab:blue')
+plt.plot(medianHVGA,color='tab:blue')
 # plt.plot(meanHVRL,color='tab:orange')
-# plt.plot(bigMaxHVGA,color='tab:blue',linestyle='dashed')
+plt.plot(maxHVGA,color='tab:blue',linestyle='dashed')
+plt.plot(minHVGA,color='tab:blue',linestyle='dashed')
 # plt.plot(bigMaxHVRL,color='tab:orange',linestyle='dashed')
-plt.fill_between(range(len(meanHVGA)), meanHVGA + stdHVGA, meanHVGA - stdHVGA, alpha=.5, linewidth=0, color='tab:blue')
+plt.fill_between(range(len(medianHVGA)), q1HVGA, q3HVGA, alpha=.5, linewidth=0, color='tab:blue')
 # plt.fill_between(range(len(meanHVRL)), meanHVRL + stdHVRL, meanHVRL - stdHVRL, alpha=.5, linewidth=0, color='tab:orange')
 # plt.legend(["Average Hypervolume Genetic Algorithm","Average Hypervolume Deep RL",
 #             "Maximum Hypervolume Genetic Algorithm","Maximum Hypervolume Deep RL"],loc="upper left")
-plt.legend(["Average Hypervolume Genetic Algorithm"],loc="upper left")
+plt.legend(["Median Hypervolume GA","Maximum Hypervolume GA","Minimum Hypervolume GA"],loc="upper left")
 plt.xlabel("Number of Function Evaluations")
 plt.ylabel("Hypervolume")
 plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
 plt.show()
+
+# configure last pf solution into dims and locs to visualize
+allDimsGA = []
+allLocsGA = []
+allTypesGA = []
+solution = pfSolutionsGA[-1]
+surfNormal = np.array([0,0,1])
+for i in range(len(componentList)):
+
+    allTypesGA.append(componentList[i].type)
+
+    transMat = getOrientation(int(solution[4*i+3]))
+    orientation = transMat
+
+    panelChoice = structPanelList[int(solution[4*i]%len(structPanelList))]
+    if solution[4*i] >= len(structPanelList):
+        surfNormal = surfNormal * -1
+    
+    surfLoc = np.matmul(panelChoice.orientation,np.multiply([solution[4*i+1],solution[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+    allLocsGA.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(componentList[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
+
+    allDimsGA.append(np.matmul(transMat,componentList[i].dimensions))
+
+panelDims = []
+panelLocs = []
+for panel in structPanelList:
+    panelLocs.append(panel.location)
+    panelDims.append(np.matmul(panel.orientation,panel.dimensions))
+
 
 # Create Figure
 fig1 = plt.figure()
@@ -139,11 +175,21 @@ ax1.set_aspect('equal')
 # for i in range(numElements):
 #     x,y,z = get_cube(elDims[i],elLocs[i])
 #     plot = ax1.plot_surface(x, y, z)
+proxyPoints = []
 for i in range(len(componentList)):
-    # x,y,z = get_cube(component.dimensions,component.location)
-    xGA,yGA,zGA = getCube(allDimsGA[-1][i],allLocsGA[-1][i])
-    plot1 = ax1.plot_surface(xGA,yGA,zGA)
+    xGA,yGA,zGA = getCube(allDimsGA[i],allLocsGA[i])
+    objColor = tuple(np.random.rand(3))
+    plot1 = ax1.plot_surface(xGA,yGA,zGA, color=objColor, label=allTypesGA[i])
+    point = ax1.scatter(allLocsGA[i][0],allLocsGA[i][1],allLocsGA[i][2],color=objColor)
+    proxyPoints.append(point)
+
+
+for j in range(len(structPanelList)):
+    xPanel,yPanel,zPanel = getCube(panelDims[j],panelLocs[j])
+    plot1 = ax1.plot_surface(xPanel,yPanel,zPanel, alpha=0.1, color='tab:gray')
+
 plt.title("Visualization of Configuration GA")
+plt.legend(proxyPoints,allTypesGA)
 
 
 # fig2 = plt.figure()

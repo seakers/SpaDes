@@ -1,12 +1,12 @@
 import numpy as np
 import itertools
 
-def centerMassCost(dimensions,locations,masses):
+def centerMassCost(locations,masses):
     # Function to calculate the center of mass
     locx = []
     locy = []
     locz = []
-    for i in range(len(dimensions)):
+    for i in range(len(locations)):
         # Separate x,y,z components
         locx.append(locations[i][0])
         locy.append(locations[i][1])
@@ -131,12 +131,12 @@ def vibrationsCost(dimensions,locations):
     
     return 1
 
-def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations):
-    maxOverlapCost = overlapCost(dimensions,[[0,0,0]]*len(dimensions)) # all comps in center
+def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasses,structDims,structLocs):
+    maxOverlapCost = overlapCost(dimensions + structDims, [[0,0,0]]*len(dimensions) + structLocs) # all comps in center
 
-    maxCmCost = centerMassCost(dimensions,[[1,1,1]]*len(dimensions),masses) # all comps in corner
+    maxCmCost = centerMassCost([[1,1,1]]*len(dimensions) + structLocs, masses + structMasses) # all comps in corner
 
-    maxOffAxisInertia,maxOnAxisInertia = inertiaCost(dimensions,[[1,1,1]]*len(dimensions),masses) # all comps in corner
+    maxOffAxisInertia,maxOnAxisInertia = inertiaCost(dimensions + structDims,[[1,1,1]]*len(dimensions) + structLocs, masses + structMasses) # all comps in corner
 
     wireLocs = [[1,1,1]]*len(dimensions)
     PCUInd = types.index("PCU")
@@ -154,7 +154,7 @@ def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations):
 
     return [maxOverlapCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost,maxThermalCost]
 
-def maxCostComps(components):
+def maxCostComps(components, structPanels):
     # pull parameters from the components
     dimensions = []
     types = []
@@ -166,13 +166,21 @@ def maxCostComps(components):
         masses.append(comp.mass)
         heatDisps.append(comp.heatDisp)
 
+    structMasses = []
+    structDims = []
+    structLocs = []
+    for panel in structPanels:
+        structMasses.append(panel.mass)
+        structDims.append(np.matmul(np.abs(panel.orientation),panel.dimensions))
+        structLocs.append(panel.location)
+
     orientations = [np.array([[1,0,0],[0,1,0],[0,0,1]])]*len(components)
 
-    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations)
+    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasses,structDims,structLocs)
 
     return [maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal]
 
-def getCostComps(components, maxCosts):
+def getCostComps(components, structPanels, maxCosts):
     # pull parameters from the components
     locations = []
     dimensions = []
@@ -188,15 +196,23 @@ def getCostComps(components, maxCosts):
         masses.append(comp.mass)
         heatDisps.append(comp.heatDisp)
 
+    structMasses = []
+    structDims = []
+    structLocs = []
+    for panel in structPanels:
+        structMasses.append(panel.mass)
+        structDims.append(np.matmul(np.abs(panel.orientation),panel.dimensions))
+        structLocs.append(panel.location)
+
     # Get the cost from each cost source
-    overlapCostVal = overlapCost(dimensions,locations)
-    cmCostCalVal = centerMassCost(dimensions,locations,masses)
-    offAxisInertia,onAxisInertia = inertiaCost(dimensions,locations,masses)
+    overlapCostVal = overlapCost(dimensions + structDims, locations + structLocs)
+    cmCostCalVal = centerMassCost(locations + structLocs, masses + structMasses)
+    offAxisInertia,onAxisInertia = inertiaCost(dimensions + structDims, locations + structLocs, masses + structMasses)
     wireCostVal = wireCost(dimensions,locations,types,orientations)
     thermalCostVal = thermalCost(dimensions,locations,heatDisps)
 
     # maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire = maxEstimatedCosts(dimensions,masses,types,heatDisps)
     maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxCosts
 
-    costList = [overlapCostVal/maxOverlap*100, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
+    costList = [overlapCostVal/maxOverlap, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
     return costList

@@ -10,7 +10,9 @@ class HypervolumeGrid:
         self.initializeGrid()
 
     def initializeGrid(self):
-        # Function to initialize the grid with the reference point
+        """
+        Function to initialize the hypervolume grid with the reference point
+        """
         self.gridSize = 11
         self.HVMax = np.prod(self.refPoint)
 
@@ -20,8 +22,14 @@ class HypervolumeGrid:
         self.numPoints = (self.gridSize)**len(self.refPoint)
         self.dominated = np.zeros(int(self.numPoints), dtype=bool)
 
-    def updateGrid(self,point):
+        self.paretoFrontPoint = []
+        self.paretoFrontSolution = []
 
+    def updateHV(self,point,solution):
+        """
+        Function to update the hypervolume grid and pareto front with a new point and index. 
+        Index for each call should be unique and able to reference the solution.
+        """
         if isinstance(point,list):
             point = np.array(point)
         pointCalc = self.refPoint - point
@@ -35,8 +43,23 @@ class HypervolumeGrid:
                 dimList = np.floor_divide(np.mod(dominatedInd,self.mult[dim]*self.gridSize,dtype=int),self.mult[dim],dtype=int)
                 fitDim = dimList <= gridPoint[dim]
                 newDominated = np.logical_and(newDominated,fitDim, dtype=bool)
+            
+            self.updateParetoFront(point,solution)
 
             self.dominated = np.logical_or(self.dominated, newDominated, dtype=bool)
+
+    def updateParetoFront(self,newPoint,solution):
+        # Function to update the pareto front
+        if not self.paretoFrontPoint:
+            self.paretoFrontPoint = [newPoint]
+            self.paretoFrontSolution = [solution]
+        else:
+            newDominated = [i for i,point in enumerate(self.paretoFrontPoint) if np.all(point >= newPoint)]
+            for j in sorted(newDominated, reverse=True):
+                del self.paretoFrontPoint[j]
+                del self.paretoFrontSolution[j]
+            self.paretoFrontPoint.append(newPoint)
+            self.paretoFrontSolution.append(solution)
 
     def getHV(self):
         return np.sum(self.dominated)/self.numPoints * self.HVMax
