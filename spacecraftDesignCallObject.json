@@ -1,26 +1,26 @@
 {
     "payloads": [
         {
-            "mass": 1.75,
+            "mass": 1.0,
             "dimensions": [
-                0.165,
-                0.178,
-                0.152
+                0.107,
+                0.084,
+                0.238
             ],
-            "avgPower": 60.0,
-            "peakPower": 60.0,
-            "name": "4K space camera",
+            "avgPower": 4.0,
+            "peakPower": 4.0,
+            "name": "5mp space camera",
             "tempRange": [
-                -10.0,
-                50.0
+                -20.0,
+                55.0
             ],
-            "resolution": 70.3125,
-            "FOV": 80.0,
+            "resolution": 40.78125,
+            "FOV": 29.0,
             "specRange": "Visible",
-            "dataRate": 102400.0
+            "dataRate": 80.0
         }
     ],
     "mission": {
-        "orbit": "GEO"
+        "orbit": "LEO"
     }
 }

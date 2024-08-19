@@ -1,2 +1,4 @@
 spacecraftCostEstObject.json
 spacecraftDesginCallObject.json
+.venv
+__pycache__
