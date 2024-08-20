@@ -11,12 +11,16 @@ from eose.coverage import CoverageRecord, CoverageRequest, CoverageResponse
 from eose.grids import UniformAngularGrid
 from eose.orbits import GeneralPerturbationsOrbitState
 from eose.satellites import Satellite
+from eose.targets import TargetPoint
 
 import requests
 import json
 from datetime import datetime, timedelta, timezone
 
 from shapely.geometry import box, mapping
+
+import matplotlib.pyplot as plt
+import geopandas as gpd
 
 
 def coverage_tatc(request: CoverageRequest) -> CoverageResponse:
@@ -94,6 +98,28 @@ def tatcCovReqTransformer(jsonPath):
 
     satelliteDicts = requestObject["satellites"]
 
+    analysisType = requestObject["analysisType"]
+    startString = requestObject["start"]
+    start = datetime(int(startString[:4]), int(startString[4:6]), int(startString[6:8]), tzinfo=timezone.utc)
+    duration = timedelta(seconds=requestObject["duration"])
+    samplePointsDict = requestObject["samplePoints"]
+    if samplePointsDict["type"] == "grid":
+        deltaLatitude = samplePointsDict["deltaLatitude"]
+        deltaLongitude = samplePointsDict["deltaLongitude"]
+        region = samplePointsDict["region"]
+        samplePoints = UniformAngularGrid(
+            delta_latitude=deltaLatitude, delta_longitude=deltaLongitude, region=mapping(box(region[0], region[1], region[2], region[3]))
+        ).as_targets()
+    elif samplePointsDict["type"] == "points":
+        points = samplePointsDict["points"]
+        samplePoints = [TargetPoint(
+                            id=i,
+                            position=(
+                                (point[0], point[1])
+                            ),
+                        )
+                        for i, point in enumerate(points)]
+
     satellites = []
     for sat in satelliteDicts:
         orbit = sat["orbit"]
@@ -116,10 +142,8 @@ def tatcCovReqTransformer(jsonPath):
             "OBJECT_ID":"1998-067A",
             "EPOCH":'2024-06-07T09:53:34.728000', # make same as start of analysis period
             "MEAN_MOTION":meanMotion, # revs per day
-            # "MEAN_MOTION":15.5,
             "ECCENTRICITY":e,
-            # "INCLINATION":i,
-            "INCLINATION":51.6419,
+            "INCLINATION":i,
             "RA_OF_ASC_NODE":lan,
             "ARG_OF_PERICENTER":argp,
             "MEAN_ANOMALY":meanAnomaly,
@@ -140,50 +164,88 @@ def tatcCovReqTransformer(jsonPath):
 
         satellites.append(satObj)
 
-        return satellites
+        # return satellites
+    request = CoverageRequest(
+        satellites=satellites,
+        targets=samplePoints,
+        start=start,
+        duration=duration,
+    )
+    # print(request.model_dump_json())
+
+    response = coverage_tatc(request)
+    plotCoverage(response)
+
+    harmonicMeanRevisit = response.harmonic_mean_revisit/timedelta(hours=1)
+
+    return harmonicMeanRevisit
+        
+def plotCoverage(response):
+    data = response.as_dataframe()
+
+    # load shapefile
+    world = gpd.read_file(
+        "https://naciscdn.org/naturalearth/110m/physical/ne_110m_land.zip"
+    )
+
+    # example composite plot using GeoDataFrames
+    fig, ax = plt.subplots()
+    ax.set_title(f"Number Samples (Coverage={response.coverage_fraction:.1%})")
+    data.plot(ax=ax, column="number_samples", legend=True)
+    world.boundary.plot(ax=ax, lw=0.5, color="k")
+    ax.set_aspect("equal")
+    plt.show()
+
+    # example composite plot using GeoDataFrames
+    fig, ax = plt.subplots()
+    ax.set_title(f"Mean Revisit (Harmonic Mean={response.harmonic_mean_revisit/timedelta(hours=1):.1f} hr)")
+    data["mean_revisit_hr"] = data.apply(lambda r: r["mean_revisit"]/timedelta(hours=1), axis=1)
+    data.plot(ax=ax, column="mean_revisit_hr", legend=True)
+    world.boundary.plot(ax=ax, lw=0.5, color="k")
+    ax.set_aspect("equal")
+    plt.show()
 
 
+# jsonPath = 'coverageAnalysisCallObject0.json'
+# satellites = tatcCovReqTransformer(jsonPath)
 
-jsonPath = 'coverageAnalysisCallObject0.json'
-satellites = tatcCovReqTransformer(jsonPath)
+# request = CoverageRequest(
+#     satellites=satellites,
+#     targets=UniformAngularGrid(
+#         delta_latitude=20, delta_longitude=20, region=mapping(box(-180, -50, 180, 50))
+#     ).as_targets(),
+#     start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+#     duration=timedelta(days=7),
+# )
+# # print(request.model_dump_json())
 
-request = CoverageRequest(
-    satellites=satellites,
-    targets=UniformAngularGrid(
-        delta_latitude=20, delta_longitude=20, region=mapping(box(-180, -50, 180, 50))
-    ).as_targets(),
-    start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    duration=timedelta(days=7),
-)
-# print(request.model_dump_json())
+# response = coverage_tatc(request)
+# # print(response.model_dump_json())
 
-response = coverage_tatc(request)
-# print(response.model_dump_json())
+# data = response.as_dataframe()
+# print(data)
 
-data = response.as_dataframe()
-print(data)
+# import matplotlib.pyplot as plt
+# import geopandas as gpd
 
-import matplotlib.pyplot as plt
-import geopandas as gpd
+# # load shapefile
+# world = gpd.read_file(
+#     "https://naciscdn.org/naturalearth/110m/physical/ne_110m_land.zip"
+# )
 
-# load shapefile
-world = gpd.read_file(
-    "https://naciscdn.org/naturalearth/110m/physical/ne_110m_land.zip"
-)
+# # example composite plot using GeoDataFrames
+# fig, ax = plt.subplots()
+# ax.set_title(f"Number Samples (Coverage={response.coverage_fraction:.1%})")
+# data.plot(ax=ax, column="number_samples", legend=True)
+# world.boundary.plot(ax=ax, lw=0.5, color="k")
+# ax.set_aspect("equal")
+# plt.show()
 
-# example composite plot using GeoDataFrames
-fig, ax = plt.subplots()
-ax.set_title(f"Number Samples (Coverage={response.coverage_fraction:.1%})")
-data.plot(ax=ax, column="number_samples", legend=True)
-world.boundary.plot(ax=ax, lw=0.5, color="k")
-ax.set_aspect("equal")
-plt.show()
-
-# example composite plot using GeoDataFrames
-fig, ax = plt.subplots()
-ax.set_title(f"Mean Revisit (Harmonic Mean={response.harmonic_mean_revisit/timedelta(hours=1):.1f} hr)")
-data["mean_revisit_hr"] = data.apply(lambda r: r["mean_revisit"]/timedelta(hours=1), axis=1)
-data.plot(ax=ax, column="mean_revisit_hr", legend=True)
-world.boundary.plot(ax=ax, lw=0.5, color="k")
-ax.set_aspect("equal")
-plt.show()
+# # example composite plot using GeoDataFrames
+# fig, ax = plt.subplots()
+# ax.set_title(f"Mean Revisit (Harmonic Mean={response.harmonic_mean_revisit/timedelta(hours=1):.1f} hr)")
+# data["mean_revisit_hr"] = data.apply(lambda r: r["mean_revisit"]/timedelta(hours=1), axis=1)
+# data.plot(ax=ax, column="mean_revisit_hr", legend=True)
+# world.boundary.plot(ax=ax, lw=0.5, color="k")
+# ax.set_aspect("equal")
+# plt.show()

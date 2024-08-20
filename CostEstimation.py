@@ -269,9 +269,6 @@ def costEstimationManager(mission):
     # total lifecycle cost
     estimate_lifecycle_mission_cost(mission)
 
-
-    print("Total Lifecycle Cost: ", mission.lifecycleCost)
-
     return mission
 
 

@@ -1,49 +1,54 @@
 import numpy as np
 import keras
 from keras import layers
-import matplotlib.pyplot as plt
 from ConfigurationCost import *
+import tensorflow as tf
 import scipy.signal
-from pymoo.indicators.hv import Hypervolume
+from ConfigUtils import getOrientation
+from HypervolumeUtils import HypervolumeGrid
 
 
 def discounted_cumulative_sums(x, discount):
     # Discounted cumulative sums of vectors for computing rewards-to-go and advantage estimates
     return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 
-import tensorflow as tf
 
 
-# @keras.saving.register_keras_serializable(package='ConfigRL', name='ConfigRL')
 class Actor(tf.keras.Model):
-    def __init__(self, **kwargs):
+    def __init__(self, num_components, num_panels, **kwargs):
         super().__init__(**kwargs)
-        self.num_components = 15
-        self.state_dim = self.num_components * 3  # 45 vars
-        self.num_actions = 100
+        self.num_components = num_components
+        self.state_dim = self.num_components * 4  # 60 vars (panel, x, y, rot) * components
+        self.position_actions = 51 # for x and y loc on each panel
+        self.rotation_actions = 24 # 24 possible right angle orientations
+        self.panel_actions = 2*num_panels # one for each side of each panel
         self.a_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002)
 
         self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
         self.hidden_1 = layers.Dense(units=64, activation='relu')
         self.hidden_2 = layers.Dense(units=64, activation='relu')
         self.hidden_3 = layers.Dense(units=64, activation='relu')
-        self.output_layer = layers.Dense(units=self.num_actions, activation='softmax')
+        self.position_output_layer = layers.Dense(units=self.position_actions, activation='softmax')
+        self.rotation_output_layer = layers.Dense(units=self.rotation_actions, activation='softmax')
+        self.panel_output_layer = layers.Dense(units=self.panel_actions, activation='softmax')
 
-
-
-    def call(self, inputs, training=False):
+    def call(self, inputs, act=0, training=False): # act is 0 for position actions, 1 for rotation actions, 2 for panel actions
         # inputs --> (batch, state_dim)
         x = inputs
         x = self.input_layer(x)
         x = self.hidden_1(x)
         x = self.hidden_2(x)
         x = self.hidden_3(x)
-        x = self.output_layer(x)
+        if act == 0:
+            x = self.position_output_layer(x)
+        elif act == 1:
+            x = self.rotation_output_layer(x)
+        elif act == 2:
+            x = self.panel_output_layer(x)
 
         return x
-    
 
-    def sample_configuration(self, observations):
+    def sample_configuration(self, observations, act):
         input_observations = []
         for obs in observations:
             input_obs = []
@@ -52,8 +57,7 @@ class Actor(tf.keras.Model):
                 input_obs.append(0)
             input_observations.append(input_obs)
         input_observations = tf.convert_to_tensor(input_observations, dtype=tf.float32)
-        output = self(input_observations)  # shape: (num components, state variables)
-        
+        output = self(input_observations, act=act)  # shape: (num components, state variables)
 
         log_probs = tf.math.log(output + 1e-10)
         samples = tf.random.categorical(log_probs, 1)
@@ -62,17 +66,39 @@ class Actor(tf.keras.Model):
         action_probs = tf.gather_nd(log_probs, tf.stack([batch_indices, action_ids], axis=-1))
         return action_probs, action_ids, output
     
-
     def ppo_update(self, observation_tensor, action_tensor, logprob_tensor, advantage_tensor):
         clip_ratio = 0.1
 
-
         with tf.GradientTape() as tape:
-            pred_probs = self.call(observation_tensor)  # (135, 100)
-            pred_log_probs = tf.math.log(pred_probs + 1e-10)
-            log_probs = tf.reduce_sum(
-                tf.one_hot(action_tensor, self.num_actions) * pred_log_probs, axis=-1
+            panel_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 0)
+            position_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 1 or tf.range(len(observation_tensor)) % 4 == 2)
+            rotation_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 3)
+
+            panel_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 0)
+            position_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 1 or tf.range(len(action_tensor)) % 4 == 2)
+            rotation_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 3)
+
+            panel_pred_probs = self.call(panel_observation_tensor, act=2)
+            panel_pred_log_probs = tf.math.log(panel_pred_probs + 1e-10)
+            panel_log_probs = tf.reduce_sum(
+                tf.one_hot(panel_action_tensor, self.panel_actions) * panel_pred_log_probs, axis=-1
             )
+
+            position_pred_probs = self.call(position_observation_tensor, act=0)
+            position_pred_log_probs = tf.math.log(position_pred_probs + 1e-10)
+            position_log_probs = tf.reduce_sum(
+                tf.one_hot(position_action_tensor, self.position_actions) * position_pred_log_probs, axis=-1
+            )
+
+            rotation_pred_probs = self.call(rotation_observation_tensor, act=1)
+            rotation_pred_log_probs = tf.math.log(rotation_pred_probs + 1e-10)
+            rotation_log_probs = tf.reduce_sum(
+                tf.one_hot(rotation_action_tensor, self.rotation_actions) * rotation_pred_log_probs, axis=-1
+            )
+
+            log_probs = tf.reshape(position_log_probs, [-1, 3])
+            log_probs = tf.concat([log_probs, tf.expand_dims(rotation_log_probs, axis=-1)], axis=-1)
+            log_probs = tf.reshape(log_probs, [-1])
 
             loss = 0
 
@@ -89,10 +115,10 @@ class Actor(tf.keras.Model):
             )
             loss += policy_loss
 
-            # Entropy 
-            entr = -tf.reduce_sum(pred_probs * pred_log_probs, axis=-1)
-            entr = tf.reduce_mean(entr)
-            # loss = loss - (0.1 * entr)
+            # # Entropy 
+            # entr = -tf.reduce_sum(pred_probs * pred_log_probs, axis=-1)
+            # entr = tf.reduce_mean(entr)
+            # # loss = loss - (0.1 * entr)
 
 
 
@@ -106,20 +132,19 @@ class Actor(tf.keras.Model):
 
         return loss,kl
 
-    
+
 class Critic(tf.keras.Model):
-    def __init__(self, **kwargs):
+    def __init__(self, num_components, **kwargs):
         super().__init__(**kwargs)
-        self.num_components = 15
-        self.state_dim = self.num_components * 3  # 45 vars
+        self.num_components = num_components
+        self.state_dim = self.num_components * 4  # 60 vars (panel, x, y, rot) * components
+        self.cost_values = 5
         self.a_optimizer = tf.keras.optimizers.Adam()
         self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
         self.hidden_1 = layers.Dense(units=64, activation='relu')
         self.hidden_2 = layers.Dense(units=64, activation='relu')
         self.hidden_3 = layers.Dense(units=64, activation='relu')
-        self.output_layer = layers.Dense(units=5, activation='linear') # One output for each cost (I hope)
-
-
+        self.output_layer = layers.Dense(units=self.cost_values, activation='linear') # One output for each cost (I hope)
 
     def call(self, inputs, training=False):
         # inputs --> (batch, state_dim)
@@ -131,7 +156,7 @@ class Critic(tf.keras.Model):
         x = self.output_layer(x)
 
         return x
-    
+
     def sample_critic(self, observations):
         input_observations = []
         for obs in observations:
@@ -143,7 +168,7 @@ class Critic(tf.keras.Model):
         input_observations = tf.convert_to_tensor(input_observations, dtype=tf.float32)
         output = self(input_observations)  # shape: (num components, 5)
         return output
-    
+
     def ppo_update(self, observaion, return_buffer):
         with tf.GradientTape() as tape:
             pred_values = self.call(observaion)
@@ -153,106 +178,59 @@ class Critic(tf.keras.Model):
         self.a_optimizer.apply_gradients(zip(critic_grads, self.trainable_variables))
 
         return value_loss
-        
+
 
 class RLWrapper():
 
     @staticmethod
-    def run(components):
-        epochs = 10
+    def run(components,structPanels,maxCosts):
+        epochs = 1500
+        num_components = len(components)
+        actor, critic = get_models(num_components)
 
-        actor, critic = get_models()
-
-        allDesigns = []
+        allLocs = []
+        allDims = []
         allCostAvg = []
         allC_loss = []
         allLoss = []
         allkl = []
         NFE = 0
         allCost = []
+        allMaxHV = []
         allHV = []
         maxHV = 0
 
         for x in range(epochs):
             print("Epoch: ", x)
-            design,cost,c_loss,loss,kl,NFE = run_epoch(actor, critic, components,NFE)
-            allDesigns.append(design[0]) # Just first design of each minibatch
+            locs,dims,cost,c_loss,loss,kl,NFE = run_epoch(actor, critic, components, structPanels, NFE, maxCosts)
+            allLocs.append(locs[0]) # Just first design of each minibatch
+            allDims.append(dims[0])
             cost = np.array(cost)
-            allCost.append(cost*10)
-            allCostAvg.append(np.mean(cost,0)*10) # Average cost of all designs in epoch
+            allCost.append(cost)
+            allCostAvg.append(np.mean(cost,0)) # Average cost of all designs in epoch
             allC_loss.append(c_loss)
             allLoss.append(loss)
             allkl.append(kl)
 
-        # allCost = np.array(allCost)
-        # for i in range(len(allCost[0])):
-        #     plt.plot(range(NFE),allCost[:,i])
-        # plt.legend(["overlapCostVal", "cmCostCalVal", "offAxisInertia", "onAxisInertia", "wireCostVal"])
-        # plt.title("Negative Cost")
-        # plt.xlabel("Number of Function Evaluations")
-        # plt.show()
-        allCostFlat = []
-        for costSet in allCost:
-            for cost in costSet:
-                allCostFlat.append(cost)
-        allCostsnp = np.array(allCostFlat)
-        maxCostList = getMaxCosts(components)
-
-        metric = Hypervolume(ref_point=np.array(maxCostList))
-        hv = [metric.do(-point) for point in allCostsnp]
-        for h in hv:
-            if h > maxHV:
-                maxHV = h
-            allHV.append(maxHV)
-
-        # plt.plot(allHV)
-        # plt.show()
-
-        # allCostAvg = np.array(allCostAvg)
-        # for i in range(len(allCostAvg[0])):
-        #     plt.plot(allCostAvg[:,i])
-        # plt.legend(["overlapCostVal", "cmCostCalVal", "offAxisInertia", "onAxisInertia", "wireCostVal"])
-        # plt.title("Deep RL - Average Fitness for Each Epoch")
-        # plt.xlabel("Epoch")
-        # plt.ylabel("Negative Cost")
-        # plt.show()
-
-        # plt.subplot(1,3,1)
-        # plt.plot(allC_loss)
-        # plt.title("Critic Loss")
-        # plt.xlabel("Epoch")
-
-        # plt.subplot(1,3,2)
-        # plt.plot(allLoss)
-        # plt.title("Actor Loss")
-        # plt.xlabel("Epoch")
-
-        # plt.subplot(1,3,3)
-        # plt.plot(allkl)
-        # plt.title("KL Divergence")
-        # plt.xlabel("Epoch")
-
-        # plt.show()
 
         print('Finished')
-        return allDesigns,allCostAvg,epochs,allHV
+        return allLocs,allDims,allCostAvg,epochs,allMaxHV,allHV
 
 
-def get_models():
-    actor = Actor()
-    critic = Critic()
+def get_models(num_components):
+    actor = Actor(num_components=num_components)
+    critic = Critic(num_components=num_components)
 
-    inputs = tf.zeros(shape=(1, 45))
+    inputs = tf.zeros(shape=(1, num_components*4))
     actor(inputs)
     critic(inputs)
-
 
     return actor, critic
 
 
-def run_epoch(actor, critic, components,NFE):
-    mini_batch_size = 1
-    num_actions = len(components)*3
+def run_epoch(actor, critic, components, structPanels, NFE, maxCosts):
+    mini_batch_size = 128
+    num_actions = len(components) * 4
 
     rewards = [[] for x in range(mini_batch_size)]
     actions = [[] for x in range(mini_batch_size)]
@@ -262,48 +240,60 @@ def run_epoch(actor, critic, components,NFE):
     observation = [[] for x in range(mini_batch_size)]
     critic_observations = [[] for x in range(mini_batch_size)]
 
-
     # 1. Sample actor
     for x in range(num_actions):
-        log_probs, sel_actions, all_action_probs = actor.sample_configuration(observation)
+        act = 0
+        if x % 4 == 3:
+            act = 1
+        elif x % 4 == 0:
+            act = 2
+        log_probs, sel_actions, all_action_probs = actor.sample_configuration(observation, act)
         # print(all_action_probs)
 
         log_probs = log_probs.numpy()
         sel_actions = sel_actions.numpy().tolist()
         for idx, action in enumerate(sel_actions):
-            coords = np.linspace(-1, 1, 101)
-            coord_selected = coords[action]
+            if act == 0:
+                coords = np.linspace(-1, 1, 51)
+                coord_selected = coords[action]
+                designs[idx].append(coord_selected)
+                observation[idx].append(coord_selected)
+            elif act == 1:
+                designs[idx].append(action)
+                observation[idx].append(action)
+            elif act == 2:
+                designs[idx].append(action)
+                observation[idx].append(action)
             actions[idx].append(action)
-            designs[idx].append(coord_selected)
             logprobs[idx].append(log_probs[idx])
-            observation[idx].append(coord_selected)
             rewards[idx].append([0,0,0,0,0])
+
 
     # Post processing
     # - transform flattened design to configuration
     # - evaluate configuration
     # - record reward
-    # ORGANIC FREE RANGE CODE
-    locations = []
-    configs = []
     cost = []
     for idx, des in enumerate(designs):
         for i in range(len(components)):
-            locs = [des[3*i],des[3*i+1],des[3*i+2]]
-            components[i].location = locs
-            locations.append(locs)
-        costVals = getCostComps(components)
-        NFE+=1
+
+            transMat = getOrientation(int(des[4*i+3]))
+            components[i].orientation = transMat
+        
+            panelChoice = structPanels[int(des[4*i]%len(structPanels))]
+            if des[4*i] >= len(structPanels):
+                surfNormal = surfNormal * -1
+            
+            surfLoc = np.matmul(panelChoice.orientation,np.multiply([des[4*i+1],des[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+            components[i].location = surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(components[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location
+
+        costVals = getCostComps(components,maxCosts)
+        NFE += 1
         adjustCostVals = []
         for costVal in costVals:
-            adjustCostVals.append(-costVal*0.1)
+            adjustCostVals.append(-costVal)
         cost.append(adjustCostVals)
         rewards[idx][-1] = cost[-1]
-        configs.append(locations)
-    
-
-    
-    # print("Cost: "cost[0])
 
     # Sample Critic
     critic_observations = []
@@ -311,16 +301,15 @@ def run_epoch(actor, critic, components,NFE):
         obs = observation[batch_element_idx]
         for idx in range(len(obs)):
             critic_obs = []
-            critic_obs.extend(obs[:idx+1])
+            critic_obs.extend(obs[:idx + 1])
             critic_observations.append(critic_obs)
     critic_values = critic.sample_critic(critic_observations)
-    # critic_values = tf.squeeze(critic_values, axis=-1)
 
     values = []
     val = []
     counter = 0
     for c in critic_values.numpy():
-        if len(val) < 45:
+        if len(val) < num_actions:
             val.append(c)
         else:
             rewards[counter].append(val[-1])
@@ -330,7 +319,7 @@ def run_epoch(actor, critic, components,NFE):
             val = [c]
     val.append(val[-1])
     rewards[counter].append(val[-1])
-    values.append(val)        
+    values.append(val)
 
     gamma = 0.99
     lam = 0.95
@@ -353,9 +342,6 @@ def run_epoch(actor, critic, components,NFE):
     )
     all_advantages = (all_advantages - advantage_mean) / advantage_std
 
-    
-
-
     observation_tensor = []
     action_tensor = []
     logprob_tensor = []
@@ -365,7 +351,7 @@ def run_epoch(actor, critic, components,NFE):
         obs = observation[batch_element_idx]
         for idx in range(len(obs)):
             obs_fragment = obs[:idx+1]
-            while len(obs_fragment) < 45:
+            while len(obs_fragment) < num_actions:
                 obs_fragment.append(0)
             observation_tensor.append(obs_fragment)
             action_tensor.append(actions[batch_element_idx][idx])
@@ -378,12 +364,6 @@ def run_epoch(actor, critic, components,NFE):
     logprob_tensor = tf.convert_to_tensor(logprob_tensor, dtype=tf.float32)
     advantage_tensor = tf.convert_to_tensor(advantage_tensor, dtype=tf.float32)
     return_tensor = tf.convert_to_tensor(return_tensor, dtype=tf.float32)
-
-    # print(observation_tensor)
-    # print(action_tensor)
-    # print(logprob_tensor)
-    # print(advantage_tensor)
-    # print(return_tensor)
 
     targetkl = 0.01
     actor_iterations = 5
@@ -408,22 +388,4 @@ def run_epoch(actor, critic, components,NFE):
     tf.print('Critic Loss: ', c_loss, '\nActor Loss: ', loss, '\nAvg Cost: ', np.mean(cost,0), "\n")
 
 
-    return configs,cost,c_loss,loss,kl,NFE
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return cost, c_loss, loss, kl, NFE

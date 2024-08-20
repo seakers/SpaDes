@@ -2,45 +2,58 @@
     "satellites": [
         {
             "orbit": {
-                "semiMajorAxis": 6471.0,
+                "semiMajorAxis": 42157000,
                 "eccentricity": 0,
-                "inclination": 0.0,
-                "longAscendingNode": 0.0,
-                "argPeriapsis": 0.0,
-                "trueAnomaly": 0.0
+                "inclination": 0.5235987755982988,
+                "longAscendingNode": 0,
+                "argPeriapsis": 0,
+                "trueAnomaly": 0
             },
-            "FOV": 100
-        },
-        {
-            "orbit": {
-                "semiMajorAxis": 6471.0,
-                "eccentricity": 0,
-                "inclination": 0.0,
-                "longAscendingNode": 0.0,
-                "argPeriapsis": 0.0,
-                "trueAnomaly": 0.0
-            },
-            "FOV": 100
+            "FOV": 1.604177025611275
         }
     ],
-    "samplePoints": [
-        [
-            0,
-            0,
-            0
-        ],
-        [
-            40,
-            0,
-            0
-        ],
-        [
-            -40,
-            0,
-            0
+    "samplePoints": {
+        "type": "points",
+        "points": [
+            [
+                0,
+                0
+            ],
+            [
+                0,
+                20
+            ],
+            [
+                0,
+                -20
+            ],
+            [
+                20,
+                0
+            ],
+            [
+                -20,
+                0
+            ],
+            [
+                20,
+                20
+            ],
+            [
+                20,
+                -20
+            ],
+            [
+                -20,
+                20
+            ],
+            [
+                -20,
+                -20
+            ]
         ]
-    ],
+    },
     "start": "20240101",
     "duration": 604800,
-    "analysisType": "Example Analysis Type"
+    "analysisType": "U"
 }

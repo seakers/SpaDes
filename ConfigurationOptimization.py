@@ -1,12 +1,8 @@
 import numpy as np
 import pygad
-import matplotlib.pyplot as plt
-from pymoo.indicators.hv import Hypervolume
 from copy import deepcopy
 from ConfigurationCost import *
-# from RLOptRotEfficient import RLWrapper as RLWrapperEfficient
-from RLOptRotV2 import RLWrapper
-# from RLOptRot import RLWrapper
+from RLOpt import RLWrapper
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
 

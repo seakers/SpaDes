@@ -72,7 +72,9 @@ def loadJSONSCDesign(jsonPath):
 
     costEstimationJSONFile = costEstimationJSON(payloads, mission, scMass, subsMass, components)
 
-    return scMass, subsMass, components, costEstimationJSONFile
+    coverageRequestJSONFile = coverageRequestJSON(payloads, mission)
+
+    return scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile
 
 
 def iterativeDesign(payloads, mission, ADCSData, GSData, LVData):
@@ -159,3 +161,61 @@ def costEstimationJSON(payloads, mission, scMass, subsMass, components):
     #     json.dump(data, jsonFile, indent=4)
 
     return costEstJSONFilename
+
+def coverageRequestJSON(payloads, mission):
+
+    FOV = max([payload.FOV for payload in payloads])
+
+    missionDict = {
+        "semiMajorAxis": mission.a,
+        "eccentricity": mission.e,
+        "inclination": mission.i,
+        "longAscendingNode": mission.lan,
+        "argPeriapsis": mission.argp,
+        "trueAnomaly": mission.trueAnomaly
+    }
+
+    satDicts = [{
+        "orbit": missionDict,
+        "FOV": FOV
+    }]
+
+    samplePoints = {
+        "type": "grid", # can be grid or points
+        "deltaLatitude": 20,
+        "deltaLongitude": 20,
+        "region": [-180,-50,180,50] # [lon1,lat1,lon2,lat2]
+    }
+
+    # samplePoints = {
+    #     "type": "points", # can be grid or points
+    #     "points": [[0,0],[0,20],[0,-20],[20,0],[-20,0],[20,20],[20,-20],[-20,20],[-20,-20]] # [lon,lat]
+    # }
+
+    start = "20240101" # YYYYMMDD
+
+    duration = 7*24*60*60 # seconds
+
+    analysisType = 'U'
+
+    tatcDict = {
+        "satellites":satDicts, 
+        "samplePoints":samplePoints, 
+        "start":start, 
+        "duration":duration, 
+        "analysisType":analysisType
+    }
+
+    ind = 0
+
+    # Serializing json
+    jsonOutput = json.dumps(tatcDict, indent=4)
+
+    coverageJSONFile = "coverageAnalysisCallObject" + str(ind) + ".json"
+
+    # Writing to sample.json
+    with open(coverageJSONFile, "w") as outfile:
+      outfile.write(jsonOutput)
+
+    # print(jsonOrbit)
+    return coverageJSONFile

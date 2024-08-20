@@ -27,6 +27,9 @@ class Mission:
         self.a = getSemimajorAxis(self.orbitType,self.rad)
         self.e = 0 # assume circular orbits for now
         self.i = getInclination(self.orbitType)
+        self.lan = 0 # temp value
+        self.argp = 0 # temp value
+        self.trueAnomaly = 0 # temp value
         self.period = orbitPeriod(self.a,self.mu)
         self.h = rToh(self.a,self.rad)
         self.fractionSunlight = estimateFractionSunlight(self.a,self.rad)

@@ -41,45 +41,47 @@ def loadJSONCostEstimation(jsonPath):
 
     mission = costEstimationManager(mission)
 
-    return mission
+    missionCost = mission.lifecycleCost
+
+    return missionCost
 
 # Create a JSON file to input into the function
-data = {
-    "satelliteDryMass": 1000,
-    "structureMass": 500,
-    "propulsionMass": 200,
-    "ADCSMass": 100,
-    "avionicsMass": 200,
-    "thermalMass": 150,
-    "EPSMass": 100,
-    "satelliteBOLPower": 500,
-    "satDataRatePerOrbit": 100,
-    "lifetime": 10,
-    "numPlanes": 1,
-    "numSats": 1,
-    "instruments": [
-        {
-            "trl": 9,
-            "mass": 50,
-            "avgPower": 100,
-            "dataRate": 50
-        },
-        {
-            "trl": 7,
-            "mass": 30,
-            "avgPower": 80,
-            "dataRate": 30
-        }
-    ],
-    "launchVehicle": {
-        "height": 70,
-        "diameter": 3.7,
-        "cost": 62000000
-    }
-}
+# data = {
+#     "satelliteDryMass": 1000,
+#     "structureMass": 500,
+#     "propulsionMass": 200,
+#     "ADCSMass": 100,
+#     "avionicsMass": 200,
+#     "thermalMass": 150,
+#     "EPSMass": 100,
+#     "satelliteBOLPower": 500,
+#     "satDataRatePerOrbit": 100,
+#     "lifetime": 10,
+#     "numPlanes": 1,
+#     "numSats": 1,
+#     "instruments": [
+#         {
+#             "trl": 9,
+#             "mass": 50,
+#             "avgPower": 100,
+#             "dataRate": 50
+#         },
+#         {
+#             "trl": 7,
+#             "mass": 30,
+#             "avgPower": 80,
+#             "dataRate": 30
+#         }
+#     ],
+#     "launchVehicle": {
+#         "height": 70,
+#         "diameter": 3.7,
+#         "cost": 62000000
+#     }
+# }
 
-with open('spacecraftCostEstObject.json', 'w') as file:
-    json.dump(data, file)
+# with open('spacecraftCostEstObject.json', 'w') as file:
+#     json.dump(data, file)
 
-mission = loadJSONCostEstimation('spacecraftCostEstObject.json')
+# mission = loadJSONCostEstimation('spacecraftCostEstObject.json')
 

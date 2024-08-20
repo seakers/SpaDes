@@ -9,6 +9,7 @@ from EPSDesign import *
 from SCDesignClasses import *
 from SpacecraftDesignSelection import loadJSONSCDesign
 from CostEstimationJSON import loadJSONCostEstimation
+from CallCoverageAnalysis import tatcCovReqTransformer
 
 ### Main script for running the SpaDes tool. Takes in a JSON file with an orbit and a payload (chosen randomly currently for testing) 
 ### and outputs the mass of the spacecraft and the mass of the subsystems, along with a list of components. This is then used to estimate the cost of the mission.
@@ -87,7 +88,10 @@ with open("spacecraftDesignCallObject" + ".json", "w") as outfile:
 
 
 # Call loadJSONSCDesign from SpacecraftDesignSelection.py
-scMass, subsMass, components, costEstimationJSONFile = loadJSONSCDesign("spacecraftDesignCallObject.json")
+scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile = loadJSONSCDesign("spacecraftDesignCallObject.json")
+
+totalMissionCost = loadJSONCostEstimation(costEstimationJSONFile) 
+harmonicMeanRevisit = tatcCovReqTransformer(coverageRequestJSONFile)
 
 print("\nFinal Mass: ",scMass)
 print("Propulsion Mass: ",subsMass["Propulsion Mass"]," (",subsMass["Propulsion Mass"]/scMass*100,"%)")
@@ -97,8 +101,9 @@ print("ADCS Mass: ",subsMass["ADCS Mass"]," (",subsMass["ADCS Mass"]/scMass*100,
 print("Avionics Mass: ",subsMass["Avionics Mass"]," (",subsMass["Avionics Mass"]/scMass*100,"%)")
 print("Payload Mass: ",subsMass["Payload Mass"]," (",subsMass["Payload Mass"]/scMass*100,"%)")
 print("Comms Mass: ",subsMass["Comms Mass"]," (",subsMass["Comms Mass"]/scMass*100,"%)")
-print("Thermal Mass: ",subsMass["Thermal Mass"]," (",subsMass["Thermal Mass"]/scMass*100,"%)")
+print("Thermal Mass: ",subsMass["Thermal Mass"]," (",subsMass["Thermal Mass"]/scMass*100,"%)\n")
+
+print("Total Lifecycle Cost: ", totalMissionCost)
+print("Harmonic Mean Revisit Time: ",harmonicMeanRevisit)
 
 print("\nROBOT VOICE: SIMULATION OVER\n")
-
-totCostObj = loadJSONCostEstimation(costEstimationJSONFile) 
