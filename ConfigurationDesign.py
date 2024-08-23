@@ -92,42 +92,44 @@ for runGA in range(numRuns):
 # print("Time for RL2: ", (t01-t00)/numRuns)
 
 # Reset locations and dimensions for Reinforcement Learning
-# i = 0
-# for comp in componentList:
-#     comp.location = compLocs[i]
-#     comp.dimensions = compDims[i]
-#     i+=1
-# # t10 = time.time()
-# allHVRL = []
-# allMaxHVRL = []
-# for runRL in range(numRuns):
-#     print("RUN: ", runRL, "\n\n")
-#     allLocsRL, allDimsRL, numStepsRL, maxHyperVolumeRL, allHyperVolumeRL = optimization(componentList,maxCostList,"RL")
-#     allMaxHVRL.append(maxHyperVolumeRL)
-#     allHVRL.append(allHyperVolumeRL)
+i = 0
+for comp in componentList:
+    comp.location = compLocs[i]
+    comp.dimensions = compDims[i]
+    i+=1
+# t10 = time.time()
+allHVRL = []
+for runRL in range(numRuns):
+    print("RUN: ", runRL, "\n\n")
+    numStepsRL, allHVRLRun, pfSolutionsRL, pfCostsRL = optimization(componentList,structPanelList,maxCostList,"RL")
+    allHVRL.append(allHVRLRun)
 # t11 = time.time()
 # print("Time for RLE: ", (t11-t10)/numRuns)
 
 allHVGA = np.array(allHVGA)
-# allHVRL = np.array(allHVRL)
+allHVRL = np.array(allHVRL)
 medianHVGA = np.median(allHVGA,0)
-# meanHVRL = np.mean(allHVRL,0)
+medianHVRL = np.median(allHVRL,0)
 q1HVGA = np.quantile(allHVGA,.25,axis=0)
 q3HVGA = np.quantile(allHVGA,.75,axis=0)
+q1HVRL = np.quantile(allHVRL,.25,axis=0)
+q3HVRL = np.quantile(allHVRL,.75,axis=0)
 maxHVGA = np.max(allHVGA,0)
 minHVGA = np.min(allHVGA,0)
+maxHVRL = np.max(allHVRL,0)
+minHVRL = np.min(allHVRL,0)
 # stdHVRL = np.std(allHVRL,0)
 
 plt.plot(medianHVGA,color='tab:blue')
-# plt.plot(meanHVRL,color='tab:orange')
+plt.plot(medianHVRL,color='tab:orange')
 plt.plot(maxHVGA,color='tab:blue',linestyle='dashed')
-plt.plot(minHVGA,color='tab:blue',linestyle='dashed')
-# plt.plot(bigMaxHVRL,color='tab:orange',linestyle='dashed')
+plt.plot(minHVGA,color='tab:blue',linestyle='dotted')
+plt.plot(maxHVRL,color='tab:orange',linestyle='dashed')
+plt.plot(minHVRL,color='tab:orange',linestyle='dotted')
 plt.fill_between(range(len(medianHVGA)), q1HVGA, q3HVGA, alpha=.5, linewidth=0, color='tab:blue')
-# plt.fill_between(range(len(meanHVRL)), meanHVRL + stdHVRL, meanHVRL - stdHVRL, alpha=.5, linewidth=0, color='tab:orange')
-# plt.legend(["Average Hypervolume Genetic Algorithm","Average Hypervolume Deep RL",
-#             "Maximum Hypervolume Genetic Algorithm","Maximum Hypervolume Deep RL"],loc="upper left")
-plt.legend(["Median Hypervolume GA","Maximum Hypervolume GA","Minimum Hypervolume GA"],loc="upper left")
+plt.fill_between(range(len(medianHVRL)), q1HVRL, q3HVRL, alpha=.5, linewidth=0, color='tab:orange')
+plt.legend(["Median Hypervolume GA","Median Hypervolume RL","Maximum Hypervolume GA","Minimum Hypervolume GA",
+            "Maximum Hypervolume RL","Minimum Hypervolume RL", "Interquartile Hypervolume GA","Interquartile Hypervolume RL"],loc="upper left")
 plt.xlabel("Number of Function Evaluations")
 plt.ylabel("Hypervolume")
 plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
@@ -137,23 +139,44 @@ plt.show()
 allDimsGA = []
 allLocsGA = []
 allTypesGA = []
-solution = pfSolutionsGA[-1]
+solutionGA = pfSolutionsGA[-1]
+
+allDimsRL = []
+allLocsRL = []
+allTypesRL = []
+solutionRL = pfSolutionsRL[-1]
+
 surfNormal = np.array([0,0,1])
 for i in range(len(componentList)):
-
+    # GA
     allTypesGA.append(componentList[i].type)
 
-    transMat = getOrientation(int(solution[4*i+3]))
+    transMat = getOrientation(int(solutionGA[4*i+3]))
     orientation = transMat
 
-    panelChoice = structPanelList[int(solution[4*i]%len(structPanelList))]
-    if solution[4*i] >= len(structPanelList):
+    panelChoice = structPanelList[int(solutionGA[4*i]%len(structPanelList))]
+    if solutionGA[4*i] >= len(structPanelList):
         surfNormal = surfNormal * -1
     
-    surfLoc = np.matmul(panelChoice.orientation,np.multiply([solution[4*i+1],solution[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+    surfLoc = np.matmul(panelChoice.orientation,np.multiply([solutionGA[4*i+1],solutionGA[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
     allLocsGA.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(componentList[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
 
     allDimsGA.append(np.matmul(transMat,componentList[i].dimensions))
+
+    # RL
+    allTypesRL.append(componentList[i].type)
+
+    transMat = getOrientation(int(solutionRL[4*i+3]))
+    orientation = transMat
+
+    panelChoice = structPanelList[int(solutionRL[4*i]%len(structPanelList))]
+    if solutionRL[4*i] >= len(structPanelList):
+        surfNormal = surfNormal * -1
+
+    surfLoc = np.matmul(panelChoice.orientation,np.multiply([solutionRL[4*i+1],solutionRL[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+    allLocsRL.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(componentList[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
+
+    allDimsRL.append(np.matmul(transMat,componentList[i].dimensions))
 
 panelDims = []
 panelLocs = []
@@ -172,16 +195,13 @@ ax1.set_ylim(-1,1)
 ax1.set_zlim(-1,1)
 ax1.set_aspect('equal')
 
-# for i in range(numElements):
-#     x,y,z = get_cube(elDims[i],elLocs[i])
-#     plot = ax1.plot_surface(x, y, z)
-proxyPoints = []
+proxyPointsGA = []
 for i in range(len(componentList)):
     xGA,yGA,zGA = getCube(allDimsGA[i],allLocsGA[i])
     objColor = tuple(np.random.rand(3))
     plot1 = ax1.plot_surface(xGA,yGA,zGA, color=objColor, label=allTypesGA[i])
     point = ax1.scatter(allLocsGA[i][0],allLocsGA[i][1],allLocsGA[i][2],color=objColor)
-    proxyPoints.append(point)
+    proxyPointsGA.append(point)
 
 
 for j in range(len(structPanelList)):
@@ -189,26 +209,34 @@ for j in range(len(structPanelList)):
     plot1 = ax1.plot_surface(xPanel,yPanel,zPanel, alpha=0.1, color='tab:gray')
 
 plt.title("Visualization of Configuration GA")
-plt.legend(proxyPoints,allTypesGA)
+plt.legend(proxyPointsGA,allTypesGA)
+
+# Create Figure
+fig1 = plt.figure()
+ax2 = fig1.add_subplot(111, projection='3d')
+
+# Plot Adjustment
+ax2.set_xlim(-1,1)
+ax2.set_ylim(-1,1)
+ax2.set_zlim(-1,1)
+ax2.set_aspect('equal')
+
+proxyPointsRL = []
+for i in range(len(componentList)):
+    xRL,yRL,zRL = getCube(allDimsRL[i],allLocsRL[i])
+    objColor = tuple(np.random.rand(3))
+    plot1 = ax2.plot_surface(xRL,yRL,zRL, color=objColor, label=allTypesRL[i])
+    point = ax2.scatter(allLocsRL[i][0],allLocsRL[i][1],allLocsRL[i][2],color=objColor)
+    proxyPointsRL.append(point)
 
 
-# fig2 = plt.figure()
-# ax2 = fig2.add_subplot(111, projection='3d')
+for j in range(len(structPanelList)):
+    xPanel,yPanel,zPanel = getCube(panelDims[j],panelLocs[j])
+    plot1 = ax2.plot_surface(xPanel,yPanel,zPanel, alpha=0.1, color='tab:gray')
 
-# ax2.set_xlim(-1,1)
-# ax2.set_ylim(-1,1)
-# ax2.set_zlim(-1,1)
-# ax2.set_aspect('equal')
+plt.title("Visualization of Configuration RL")
+plt.legend(proxyPointsRL,allTypesRL)
 
-# for i in range(len(componentList)):
-#     # x,y,z = get_cube(component.dimensions,component.location)
-#     xRL,yRL,zRL = getCube(allDimsRL[-1][i],allLocsRL[-1][i])
-#     plot2 = ax2.plot_surface(xRL,yRL,zRL)
-# plt.title("Visualization of Configuration Deep RL")
 
-# if numStepsGA > 0:
-#     ani = animation.FuncAnimation(fig2, updatePlot, numStepsGA, fargs=(allDimsGA, allLocsGA))
 
-# ax1.title("Visualization of Configuration GA")
-# ax2.title("Visualization of Configuration GA Animation")
 plt.show()

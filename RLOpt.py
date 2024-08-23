@@ -71,11 +71,11 @@ class Actor(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             panel_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 0)
-            position_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 1 or tf.range(len(observation_tensor)) % 4 == 2)
+            position_observation_tensor = tf.boolean_mask(observation_tensor, tf.math.logical_or(tf.range(len(observation_tensor)) % 4 == 1, tf.range(len(observation_tensor)) % 4 == 2))
             rotation_observation_tensor = tf.boolean_mask(observation_tensor, tf.range(len(observation_tensor)) % 4 == 3)
 
             panel_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 0)
-            position_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 1 or tf.range(len(action_tensor)) % 4 == 2)
+            position_action_tensor = tf.boolean_mask(action_tensor, tf.math.logical_or(tf.range(len(action_tensor)) % 4 == 1, tf.range(len(action_tensor)) % 4 == 2))
             rotation_action_tensor = tf.boolean_mask(action_tensor, tf.range(len(action_tensor)) % 4 == 3)
 
             panel_pred_probs = self.call(panel_observation_tensor, act=2)
@@ -96,8 +96,8 @@ class Actor(tf.keras.Model):
                 tf.one_hot(rotation_action_tensor, self.rotation_actions) * rotation_pred_log_probs, axis=-1
             )
 
-            log_probs = tf.reshape(position_log_probs, [-1, 3])
-            log_probs = tf.concat([log_probs, tf.expand_dims(rotation_log_probs, axis=-1)], axis=-1)
+            log_probs = tf.reshape(position_log_probs, [-1, 2])
+            log_probs = tf.concat([tf.expand_dims(panel_log_probs, axis=-1), log_probs, tf.expand_dims(rotation_log_probs, axis=-1)], axis=-1)
             log_probs = tf.reshape(log_probs, [-1])
 
             loss = 0
@@ -138,7 +138,7 @@ class Critic(tf.keras.Model):
         super().__init__(**kwargs)
         self.num_components = num_components
         self.state_dim = self.num_components * 4  # 60 vars (panel, x, y, rot) * components
-        self.cost_values = 5
+        self.cost_values = 6 # number of cost values
         self.a_optimizer = tf.keras.optimizers.Adam()
         self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
         self.hidden_1 = layers.Dense(units=128, activation='relu')
@@ -184,41 +184,28 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 1500
+        epochs = 750
         num_components = len(components)
-        actor, critic = get_models(num_components)
+        num_panels = len(structPanels)
+        actor, critic = get_models(num_components, num_panels)
 
-        allLocs = []
-        allDims = []
-        allCostAvg = []
-        allC_loss = []
-        allLoss = []
-        allkl = []
         NFE = 0
-        allCost = []
-        allMaxHV = []
         allHV = []
-        maxHV = 0
+        HVgrid = HypervolumeGrid([1,1,1,1,1,1])
 
         for x in range(epochs):
             print("Epoch: ", x)
-            locs,dims,cost,c_loss,loss,kl,NFE = run_epoch(actor, critic, components, structPanels, NFE, maxCosts)
-            allLocs.append(locs[0]) # Just first design of each minibatch
-            allDims.append(dims[0])
-            cost = np.array(cost)
-            allCost.append(cost)
-            allCostAvg.append(np.mean(cost,0)) # Average cost of all designs in epoch
-            allC_loss.append(c_loss)
-            allLoss.append(loss)
-            allkl.append(kl)
+            NFE, HVgrid, allHV  = run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV)
 
+        pfSolutions = HVgrid.paretoFrontSolution
+        pfCosts = HVgrid.paretoFrontPoint
 
         print('Finished')
-        return allLocs,allDims,allCostAvg,epochs,allMaxHV,allHV
+        return epochs,allHV,pfSolutions,pfCosts
 
 
-def get_models(num_components):
-    actor = Actor(num_components=num_components)
+def get_models(num_components, num_panels):
+    actor = Actor(num_components=num_components, num_panels=num_panels)
     critic = Critic(num_components=num_components)
 
     inputs = tf.zeros(shape=(1, num_components*4))
@@ -228,7 +215,7 @@ def get_models(num_components):
     return actor, critic
 
 
-def run_epoch(actor, critic, components, structPanels, NFE, maxCosts):
+def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV):
     mini_batch_size = 128
     num_actions = len(components) * 4
 
@@ -259,20 +246,23 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts):
                 designs[idx].append(coord_selected)
                 observation[idx].append(coord_selected)
             elif act == 1:
+                orientation_norm = np.linspace(0, 1, 24)
                 designs[idx].append(action)
-                observation[idx].append(action)
+                observation[idx].append(orientation_norm[action])
             elif act == 2:
+                panel_norm = np.linspace(0, 1, 2*len(structPanels))
                 designs[idx].append(action)
-                observation[idx].append(action)
+                observation[idx].append(panel_norm[action])
             actions[idx].append(action)
             logprobs[idx].append(log_probs[idx])
-            rewards[idx].append([0,0,0,0,0])
+            rewards[idx].append([0,0,0,0,0,0])
 
 
     # Post processing
     # - transform flattened design to configuration
     # - evaluate configuration
     # - record reward
+    surfNormal = np.array([0,0,1])
     cost = []
     for idx, des in enumerate(designs):
         for i in range(len(components)):
@@ -287,8 +277,10 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts):
             surfLoc = np.matmul(panelChoice.orientation,np.multiply([des[4*i+1],des[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
             components[i].location = surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(components[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location
 
-        costVals = getCostComps(components,maxCosts)
+        costVals = getCostComps(components,structPanels,maxCosts)
         NFE += 1
+        HVgrid.updateHV(costVals, des)
+        allHV.append(HVgrid.getHV())
         adjustCostVals = []
         for costVal in costVals:
             adjustCostVals.append(-costVal)
@@ -388,4 +380,4 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts):
     tf.print('Critic Loss: ', c_loss, '\nActor Loss: ', loss, '\nAvg Cost: ', np.mean(cost,0), "\n")
 
 
-    return cost, c_loss, loss, kl, NFE
+    return NFE, HVgrid, allHV
