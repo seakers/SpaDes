@@ -1,0 +1,31 @@
+{
+    "payloads": [
+        {
+            "mass": 1.1,
+            "dimensions": [
+                0.98,
+                0.98,
+                0.176
+            ],
+            "avgPower": 2.5,
+            "peakPower": 5.8,
+            "name": "multiscape100",
+            "tempRange": [
+                -10.0,
+                50.0
+            ],
+            "resolution": 1.9595156593326784,
+            "FOV": 2.22,
+            "specRange": "VNIR",
+            "dataRate": 24.576
+        }
+    ],
+    "mission": {
+        "semiMajorAxis": 6771,
+        "inclination": 60,
+        "eccentricity": 0,
+        "longAscendingNode": 0,
+        "argPeriapsis": 0,
+        "trueAnomaly": 0
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "satelliteDryMass": 36.80602381000549,
+    "structureMass": 8.911315301642114,
+    "propulsionMass": 0.0,
+    "ADCSMass": 4.784,
+    "avionicsMass": 1.4729446779573743,
+    "thermalMass": 2.2351935488003156,
+    "EPSMass": 3.417526514055568,
+    "satelliteBOLPower": 36.980049002859474,
+    "satDataRatePerOrbit": 2452.8,
+    "lifetime": 5,
+    "numPlanes": 1,
+    "numSats": 1,
+    "instruments": [
+        {
+            "trl": 9,
+            "mass": 12.1,
+            "avgPower": 12.1,
+            "dataRate": 2452.8
+        }
+    ],
+    "launchVehicle": {
+        "height": 3.5,
+        "diameter": 2.38,
+        "cost": 20.0
+    }
+}

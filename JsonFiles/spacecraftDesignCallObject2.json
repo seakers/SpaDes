@@ -1,0 +1,31 @@
+{
+    "payloads": [
+        {
+            "mass": 6.0,
+            "dimensions": [
+                0.3,
+                0.145,
+                0.145
+            ],
+            "avgPower": 10.0,
+            "peakPower": 14.0,
+            "name": "Monitor Imager",
+            "tempRange": [
+                10.0,
+                30.0
+            ],
+            "resolution": 0.8250592249872855,
+            "FOV": 2.176977683729388,
+            "specRange": "VNIR",
+            "dataRate": 480.0
+        }
+    ],
+    "mission": {
+        "semiMajorAxis": 6571,
+        "inclination": 60,
+        "eccentricity": 0,
+        "longAscendingNode": 0,
+        "argPeriapsis": 0,
+        "trueAnomaly": 0
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "payloads": [
+        {
+            "mass": 1.75,
+            "dimensions": [
+                0.165,
+                0.178,
+                0.152
+            ],
+            "avgPower": 60.0,
+            "peakPower": 60.0,
+            "name": "4K space camera",
+            "tempRange": [
+                -10.0,
+                50.0
+            ],
+            "resolution": 70.3125,
+            "FOV": 80.0,
+            "specRange": "Visible",
+            "dataRate": 102400.0
+        }
+    ],
+    "mission": {
+        "semiMajorAxis": 6771,
+        "inclination": 60,
+        "eccentricity": 0,
+        "longAscendingNode": 0,
+        "argPeriapsis": 0,
+        "trueAnomaly": 0
+    }
+}
