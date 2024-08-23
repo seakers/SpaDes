@@ -52,7 +52,7 @@ def estimateDepthofDischarge(orbitType):
     """
     if orbitType == "GEO":
         DOD = 0.8
-    elif orbitType == "SSO":
+    elif orbitType == "MEO":
         DOD = 0.6
     else:
         DOD = 0.4

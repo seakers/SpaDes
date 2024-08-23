@@ -2,13 +2,14 @@ import numpy as np
 import json
 import itertools
 from datetime import datetime, timedelta, timezone
+from CallCoverageAnalysis import tatcCovReqTransformer
 
 class OrbitTatc():
     
-    def __init__(self, semiMajorAxis, eccentricity, inclination, longAscendingNode, argPeriapsis, trueAnomaly):
+    def __init__(self, semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly):
         self.semiMajorAxis = semiMajorAxis
-        self.eccentricity = eccentricity
         self.inclination = inclination
+        self.eccentricity = eccentricity
         self.longAscendingNode = longAscendingNode
         self.argPeriapsis = argPeriapsis
         self.trueAnomaly = trueAnomaly
@@ -35,7 +36,7 @@ def orbit2JSON(satList,samplePoints, start, duration, analysisType):
     jsonOutput = json.dumps(tatcDict, indent=4)
 
     # Writing to sample.json
-    with open("coverageAnalysisCallObject" + str(ind) + ".json", "w") as outfile:
+    with open("JsonFiles\coverageAnalysisCallObject" + str(ind) + "Test" + ".json", "w") as outfile:
       outfile.write(jsonOutput)
 
     # print(jsonOrbit)
@@ -52,28 +53,38 @@ def orbit2JSON(satList,samplePoints, start, duration, analysisType):
 
 # Orbit
 rad = 6371 # km
-semiMajorAxes = np.linspace(100+rad,35786+rad,num=2) # km
-# inclinations = np.linspace(-90,90,num=1) # deg
-inclinations = [0]
-eccentricites = np.linspace(0,1,num=1)
-longAscendingNodes = np.linspace(0,360,num=1) # deg
-argPeriapses = np.linspace(0,360,num=1) # deg
-trueAnomalies = np.linspace(0,360,num=1) # deg
+semiMajorAxes = [200+rad,300+rad] # km
+inclinations = [50,60]
+eccentricites = [0,.1]
+longAscendingNodes = [0,90] # deg
+argPeriapses = [0,90] # deg
+trueAnomalies = [0,90] # deg
 
 FOVs = [100,150] # Degrees
-samplePoints = [[0,0,0],[40,0,0],[-40,0,0]]
+# samplePoints = {
+#         "type": "points", # can be grid or points
+#         "points": [[0,0],[0,20],[0,-20],[20,0],[-20,0],[20,20],[20,-20],[-20,20],[-20,-20]] # [lon,lat]
+#     }
+samplePoints = {
+        "type": "grid", # can be grid or points
+        "deltaLatitude": 20,
+        "deltaLongitude": 20,
+        "region": [-180,-50,180,50] # [lon1,lat1,lon2,lat2]
+    }
 # start = datetime(2024, 1, 1, tzinfo=timezone.utc)
 # start = start.strftime("%Y%m%d") # yyyymmdd
 start = "20240101" # yyymmdd
 duration = 7*24*60*60 # 7 days in seconds
-analysisType = "Example Analysis Type"
+analysisType = "U"
 
 ind = 0
 fullFactEnum = itertools.product(semiMajorAxes,inclinations,eccentricites,longAscendingNodes,argPeriapses,trueAnomalies,FOVs)
 for vals in fullFactEnum:
     # Call TATC
     orbit = OrbitTatc(vals[0],vals[1],vals[2],vals[3],vals[4],vals[5])
-    satList = [SatTatc(orbit,vals[6]),SatTatc(orbit,vals[6])]
+    satList = [SatTatc(orbit,vals[6])]
     jsonOrbit = orbit2JSON(satList, samplePoints, start, duration, analysisType)
-    ind += 1
 
+    harmonicMeanRevisit = tatcCovReqTransformer("JsonFiles\coverageAnalysisCallObject" + str(ind) + "Test" + ".json")
+    print("Harmonic Mean Revisit: ",harmonicMeanRevisit)
+    ind += 1

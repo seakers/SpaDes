@@ -125,12 +125,13 @@ def tatcCovReqTransformer(jsonPath):
         orbit = sat["orbit"]
         a = orbit["semiMajorAxis"] # km
         e = orbit["eccentricity"]
-        i = orbit["inclination"]
+        i = orbit["inclination"]%180 # to make between 0 and 180 bc thats what tatc/eose expects
         lan = orbit["longAscendingNode"]
         argp = orbit["argPeriapsis"]
         trueAnomaly = orbit["trueAnomaly"]
 
-        FOV = sat["FOV"]
+        # FOV = sat["FOV"]
+        FOV = 100 # the tatc FOV is really a field of regard
 
         mu = 3.986e14
         P = 2*np.pi*np.sqrt((a*1000)**3/mu) # seconds
@@ -148,7 +149,7 @@ def tatcCovReqTransformer(jsonPath):
             "ARG_OF_PERICENTER":argp,
             "MEAN_ANOMALY":meanAnomaly,
             "EPHEMERIS_TYPE":0,
-            "CLASSIFICATION_TYPE":'U',
+            "CLASSIFICATION_TYPE":analysisType,
             "NORAD_CAT_ID":25544,
             "ELEMENT_SET_NO":999,
             "REV_AT_EPOCH":45703,
@@ -156,6 +157,14 @@ def tatcCovReqTransformer(jsonPath):
             "MEAN_MOTION_DOT":0, # often 0 for art
             "MEAN_MOTION_DDOT":0 # always 0 for sgp4
         }
+
+        print("\nSemi Major Axis: ", a)
+        print("Eccentricity: ", e)
+        print("Inclination: ", i)
+        print("LAN: ", lan)
+        print("Arg Periapsis: ", argp)
+        print("True Anomaly: ", trueAnomaly)
+        
         
         satObj = Satellite(
             orbit=GeneralPerturbationsOrbitState.from_omm(adjSat),
@@ -174,7 +183,7 @@ def tatcCovReqTransformer(jsonPath):
     # print(request.model_dump_json())
 
     response = coverage_tatc(request)
-    plotCoverage(response)
+    # plotCoverage(response)
 
     harmonicMeanRevisit = response.harmonic_mean_revisit/timedelta(hours=1)
 

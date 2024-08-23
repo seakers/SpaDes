@@ -13,7 +13,7 @@ def calcRange(h, epsMin):
     """
     
     """
-    rad = 6378
+    rad = 6378 # km
     rho = np.arcsin(rad/(rad+h))*180/np.pi
     etaMax = np.arcsin(np.sin(rho*np.pi/180)*np.cos(epsMin*np.pi/180))*180/np.pi
     lambdaMax = 90 - epsMin - etaMax
@@ -218,7 +218,7 @@ def designAntenna(alt,dryMass,dataRate,Ptx,Gtx,bandi,compInstance): # maybe rewo
         nChannels = (bwNEN[bandi][0] - bwNEN[bandi][0])/32e6
         if Gtx < 3 and bandi == 0:
             lamb = 3e8/fDL
-            if Gtx < 1/76: ## Possible typo here. Might be 1.76. Look Into later
+            if Gtx < 1.76: 
                 Ltx = .1*lamb
             elif Gtx > 1.76 and Gtx < 2.15:
                 Ltx = .5*lamb
@@ -293,7 +293,7 @@ def designComms(payloads,mission,spacecraft,compInstance):
     # pull params
     dataRate = sum([payload.dataRate for payload in payloads])
     dryMass = spacecraft.dryMass
-    alt = mission.h
+    alt = mission.h # km
 
     # Parameters
 
@@ -343,12 +343,12 @@ def designComms(payloads,mission,spacecraft,compInstance):
     if bestCommsCompsList == None:
         bestCommsCompsList = commsCompList
         massMin = newMass
-    # if i == -1 or j == -1:    
+    # if imin == -1 or jmin == -1:    
     #     bestCommsList = designAntenna(alt,dryMass,dataRate,max(recieverPower),max(antennaGain),bandi,compInstance)
-    #     bestCommsMass = bestCommsList[0].mass + bestCommsList[1].mass
+    #     massMin = bestCommsList[0].mass + bestCommsList[1].mass
     # else:
     #     bestCommsList = nenAntennas[bandMin][imin][jmin]
-    #     bestCommsMass = nenAntennas[bandMin][imin][jmin][0].mass + nenAntennas[bandMin][imin][jmin][1].mass        
+    #     massMin = nenAntennas[bandMin][imin][jmin][0].mass + nenAntennas[bandMin][imin][jmin][1].mass        
 
     spacecraft.comms = bestCommsCompsList
     return massMin,bestCommsCompsList

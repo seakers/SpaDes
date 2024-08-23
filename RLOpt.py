@@ -18,16 +18,16 @@ class Actor(tf.keras.Model):
     def __init__(self, num_components, num_panels, **kwargs):
         super().__init__(**kwargs)
         self.num_components = num_components
-        self.state_dim = self.num_components * 4  # 60 vars (panel, x, y, rot) * components
+        self.state_dim = self.num_components*4  # 60 vars (panel, x, y, rot) * components
         self.position_actions = 51 # for x and y loc on each panel
         self.rotation_actions = 24 # 24 possible right angle orientations
         self.panel_actions = 2*num_panels # one for each side of each panel
         self.a_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002)
 
         self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
-        self.hidden_1 = layers.Dense(units=64, activation='relu')
-        self.hidden_2 = layers.Dense(units=64, activation='relu')
-        self.hidden_3 = layers.Dense(units=64, activation='relu')
+        self.hidden_1 = layers.Dense(units=128, activation='relu')
+        self.hidden_2 = layers.Dense(units=128, activation='relu')
+        self.hidden_3 = layers.Dense(units=128, activation='relu')
         self.position_output_layer = layers.Dense(units=self.position_actions, activation='softmax')
         self.rotation_output_layer = layers.Dense(units=self.rotation_actions, activation='softmax')
         self.panel_output_layer = layers.Dense(units=self.panel_actions, activation='softmax')
@@ -141,9 +141,9 @@ class Critic(tf.keras.Model):
         self.cost_values = 5
         self.a_optimizer = tf.keras.optimizers.Adam()
         self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
-        self.hidden_1 = layers.Dense(units=64, activation='relu')
-        self.hidden_2 = layers.Dense(units=64, activation='relu')
-        self.hidden_3 = layers.Dense(units=64, activation='relu')
+        self.hidden_1 = layers.Dense(units=128, activation='relu')
+        self.hidden_2 = layers.Dense(units=128, activation='relu')
+        self.hidden_3 = layers.Dense(units=128, activation='relu')
         self.output_layer = layers.Dense(units=self.cost_values, activation='linear') # One output for each cost (I hope)
 
     def call(self, inputs, training=False):

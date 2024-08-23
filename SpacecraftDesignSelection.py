@@ -9,7 +9,7 @@ from EPSDesign import *
 from SCDesignClasses import *
 
 
-def loadJSONSCDesign(jsonPath):
+def loadJSONSCDesign(jsonPath, ind):
     """
     Function to load data for the spacecraft design module. Calls iterativeDesign
     """
@@ -41,7 +41,14 @@ def loadJSONSCDesign(jsonPath):
         payloads.append(payloadComp)
     
     # import into mission object
-    mission = Mission(missionDict['orbit'])
+    mission = Mission(
+        semiMajorAxis=missionDict['semiMajorAxis'],
+        inclination=missionDict['inclination'],
+        eccentricity=missionDict['eccentricity'],
+        longAscendingNode=missionDict['longAscendingNode'],
+        argPeriapsis=missionDict['argPeriapsis'],
+        trueAnomaly=missionDict['trueAnomaly']
+    )
 
     ## Load spreadsheets containing component data
 
@@ -70,9 +77,9 @@ def loadJSONSCDesign(jsonPath):
 
     scMass, subsMass, components = iterativeDesign(payloads, mission, ADCSData, GSData, LVData)
 
-    costEstimationJSONFile = costEstimationJSON(payloads, mission, scMass, subsMass, components)
+    costEstimationJSONFile = costEstimationJSON(payloads, mission, scMass, subsMass, components, ind)
 
-    coverageRequestJSONFile = coverageRequestJSON(payloads, mission)
+    coverageRequestJSONFile = coverageRequestJSON(payloads, mission, ind)
 
     return scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile
 
@@ -110,7 +117,7 @@ def iterativeDesign(payloads, mission, ADCSData, GSData, LVData):
 
     return newMass, subsMass, components
 
-def costEstimationJSON(payloads, mission, scMass, subsMass, components):
+def costEstimationJSON(payloads, mission, scMass, subsMass, components, ind):
 
     # pull params
     PavgPayload = sum([payload.avgPower for payload in payloads])
@@ -153,7 +160,7 @@ def costEstimationJSON(payloads, mission, scMass, subsMass, components):
         }
         data["instruments"].append(instrument_data)
 
-    costEstJSONFilename = 'spacecraftCostEstObject.json'
+    costEstJSONFilename = 'JsonFiles\spacecraftCostEstObject' + str(ind) + '.json'
     costEstJSON = json.dumps(data, indent=4)
     with open(costEstJSONFilename, 'w') as jsonFile:
         jsonFile.write(costEstJSON)
@@ -162,14 +169,14 @@ def costEstimationJSON(payloads, mission, scMass, subsMass, components):
 
     return costEstJSONFilename
 
-def coverageRequestJSON(payloads, mission):
+def coverageRequestJSON(payloads, mission, ind):
 
     FOV = max([payload.FOV for payload in payloads])
 
     missionDict = {
         "semiMajorAxis": mission.a,
-        "eccentricity": mission.e,
         "inclination": mission.i,
+        "eccentricity": mission.e,
         "longAscendingNode": mission.lan,
         "argPeriapsis": mission.argp,
         "trueAnomaly": mission.trueAnomaly
@@ -206,12 +213,10 @@ def coverageRequestJSON(payloads, mission):
         "analysisType":analysisType
     }
 
-    ind = 0
-
     # Serializing json
     jsonOutput = json.dumps(tatcDict, indent=4)
 
-    coverageJSONFile = "coverageAnalysisCallObject" + str(ind) + ".json"
+    coverageJSONFile = "JsonFiles\coverageAnalysisCallObject" + str(ind) + ".json"
 
     # Writing to sample.json
     with open(coverageJSONFile, "w") as outfile:

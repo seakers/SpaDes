@@ -12,26 +12,27 @@ class Mission:
     Input variables and thier desired units/type:
     orbitType string
     """
-    def __init__(self, orbitType):
-        self.orbitType = orbitType
+    def __init__(self, semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly):
+        self.a = semiMajorAxis
+        self.e = eccentricity
+        self.i = inclination
+        self.lan = longAscendingNode
+        self.argp = argPeriapsis
+        self.trueAnomaly = trueAnomaly
+        # assuming earth orbit for now
+        self.mu = 3.986e14 # m^3 s^-2
+        self.rad = 6371 # km
         self.getOrbitParams()
 
     def getOrbitParams(self):
-        # Checks if the orbit is an earth orbit and assigns a mu and rad appropriately
-        if self.orbitType in ["LEO", "SSO", "MEO", "GEO"]:
-            self.mu = 3.986e14 # m^3 s^-2
-            self.rad = 6371000 # m
+        if self.a < 2000 + self.rad:
+            self.orbitType = "LEO"
+        elif self.a < 35786 + self.rad:
+            self.orbitType = "MEO"
         else:
-            print("Orbit Type not implimented yet")
-        
-        self.a = getSemimajorAxis(self.orbitType,self.rad)
-        self.e = 0 # assume circular orbits for now
-        self.i = getInclination(self.orbitType)
-        self.lan = 0 # temp value
-        self.argp = 0 # temp value
-        self.trueAnomaly = 0 # temp value
+            self.orbitType = "GEO"
         self.period = orbitPeriod(self.a,self.mu)
-        self.h = rToh(self.a,self.rad)
+        self.h = rToh(self.a,self.rad) # km
         self.fractionSunlight = estimateFractionSunlight(self.a,self.rad)
         self.depthOfDischarge = estimateDepthofDischarge(self.orbitType)
         self.lifetime = 5 # chosen at random for now

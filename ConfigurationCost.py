@@ -127,6 +127,8 @@ def thermalCost(dimensions,locations,heatDisps):
 
     return QnetVar
 
+
+
 def vibrationsCost(dimensions,locations):
     
     return 1
