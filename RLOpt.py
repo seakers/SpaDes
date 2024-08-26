@@ -184,7 +184,7 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 750
+        epochs = 10
         num_components = len(components)
         num_panels = len(structPanels)
         actor, critic = get_models(num_components, num_panels)

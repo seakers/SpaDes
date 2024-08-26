@@ -53,7 +53,12 @@ componentList = [
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    Component(type="payload", mass=5, dimensions=[.3,.25,.2], heatDisp=3),
+    Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5),
+    Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5)
 ]
+
+# electrical ports are located on the -x side and pointing is located on the +x side, as the dimensions are defined
 
 structPanelList = [
     Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,0,.5], orientation=getOrientation(0)),
@@ -79,7 +84,7 @@ for comp in componentList:
 maxCostList = maxCostComps(componentList,structPanelList)
 
 # Optimize
-numRuns = 20
+numRuns = 3
 
 # Genetic Algorithm
 # t00 = time.time()
@@ -195,12 +200,13 @@ ax1.set_ylim(-1,1)
 ax1.set_zlim(-1,1)
 ax1.set_aspect('equal')
 
+objColor = tuple(np.random.rand(len(componentList),3))
+
 proxyPointsGA = []
 for i in range(len(componentList)):
     xGA,yGA,zGA = getCube(allDimsGA[i],allLocsGA[i])
-    objColor = tuple(np.random.rand(3))
-    plot1 = ax1.plot_surface(xGA,yGA,zGA, color=objColor, label=allTypesGA[i])
-    point = ax1.scatter(allLocsGA[i][0],allLocsGA[i][1],allLocsGA[i][2],color=objColor)
+    plot1 = ax1.plot_surface(xGA,yGA,zGA, color=objColor[i], label=allTypesGA[i])
+    point = ax1.scatter(allLocsGA[i][0],allLocsGA[i][1],allLocsGA[i][2],color=objColor[i])
     proxyPointsGA.append(point)
 
 
@@ -224,9 +230,8 @@ ax2.set_aspect('equal')
 proxyPointsRL = []
 for i in range(len(componentList)):
     xRL,yRL,zRL = getCube(allDimsRL[i],allLocsRL[i])
-    objColor = tuple(np.random.rand(3))
-    plot1 = ax2.plot_surface(xRL,yRL,zRL, color=objColor, label=allTypesRL[i])
-    point = ax2.scatter(allLocsRL[i][0],allLocsRL[i][1],allLocsRL[i][2],color=objColor)
+    plot1 = ax2.plot_surface(xRL,yRL,zRL, color=objColor[i], label=allTypesRL[i])
+    point = ax2.scatter(allLocsRL[i][0],allLocsRL[i][1],allLocsRL[i][2],color=objColor[i])
     proxyPointsRL.append(point)
 
 

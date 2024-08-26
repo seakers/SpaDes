@@ -127,6 +127,44 @@ def thermalCost(dimensions,locations,heatDisps):
 
     return QnetVar
 
+def pointingObj(dimensions,locations,types,orientations):
+    """
+    Function to calculate if the pointing of certain components is clear
+    """
+
+    # setting pointing to be in the +x direction
+    pointDir = np.array([1,0,0])
+
+    pointingComps = ["solar panel","payload","transmitter","receiver"]
+
+    newPointLocs = []
+    newPointDims = []
+
+    for ind,comp in enumerate(types):
+        if comp in pointingComps:
+            compPointDir = np.matmul(orientations[ind],pointDir)
+            pointLoc = np.array(locations[ind]) + np.multiply(np.array(dimensions[ind])/2,compPointDir)
+            pointDimMain = np.multiply(compPointDir - pointLoc, compPointDir)
+            pointDimOff = np.abs(np.matmul(orientations[ind],np.array([0,0.01,0.01])))
+            pointDims = pointDimMain + pointDimOff
+            pointLocCenter = pointLoc + np.multiply(pointDimMain/2,compPointDir)
+            newPointLocs.append(pointLocCenter)
+            newPointDims.append(pointDims)
+        
+    return newPointLocs,newPointDims
+
+            
+def constraintCost(dimensions,locations,types,orientations):
+    """
+    Function to calculate the cost of overlap and pointing of components
+    First creates imaginary pointing componets, then calls the overlap function
+    """
+
+    newPointLocs,newPointDims = pointingObj(dimensions,locations,types,orientations)
+
+    constrCost = overlapCost(dimensions + newPointDims,locations + newPointLocs)
+
+    return constrCost
 
 
 def vibrationsCost(dimensions,locations):
@@ -134,7 +172,7 @@ def vibrationsCost(dimensions,locations):
     return 1
 
 def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasses,structDims,structLocs):
-    maxOverlapCost = overlapCost(dimensions + structDims, [[0,0,0]]*len(dimensions) + structLocs) # all comps in center
+    maxConstraintCost = constraintCost(dimensions + structDims, [[0,0,0]]*len(dimensions) + structLocs, types, orientations) # all comps in center
 
     maxCmCost = centerMassCost([[1,1,1]]*len(dimensions) + structLocs, masses + structMasses) # all comps in corner
 
@@ -150,11 +188,11 @@ def maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasse
     sortHeats = sorted(heatDisps)
     heatCutoff = sortHeats[6]
     for i,heat in enumerate(heatDisps):
-        if heat <= heatCutoff:
+        if heat <= heatCutoff and altCorners:
             thermLocs[i] = altCorners.pop()
     maxThermalCost = thermalCost(dimensions,thermLocs,heatDisps) # all comps in center
 
-    return [maxOverlapCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost,maxThermalCost]
+    return [maxConstraintCost,maxCmCost,maxOffAxisInertia,maxOnAxisInertia,maxWireCost,maxThermalCost]
 
 def maxCostComps(components, structPanels):
     # pull parameters from the components
@@ -178,9 +216,9 @@ def maxCostComps(components, structPanels):
 
     orientations = [np.array([[1,0,0],[0,1,0],[0,0,1]])]*len(components)
 
-    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasses,structDims,structLocs)
+    maxConstraint,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxEstimatedCosts(dimensions,masses,types,heatDisps,orientations,structMasses,structDims,structLocs)
 
-    return [maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal]
+    return [maxConstraint,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal]
 
 def getCostComps(components, structPanels, maxCosts):
     # pull parameters from the components
@@ -207,14 +245,14 @@ def getCostComps(components, structPanels, maxCosts):
         structLocs.append(panel.location)
 
     # Get the cost from each cost source
-    overlapCostVal = overlapCost(dimensions + structDims, locations + structLocs)
+    constraintCostVal = constraintCost(dimensions + structDims, locations + structLocs, types, orientations)
     cmCostCalVal = centerMassCost(locations + structLocs, masses + structMasses)
     offAxisInertia,onAxisInertia = inertiaCost(dimensions + structDims, locations + structLocs, masses + structMasses)
     wireCostVal = wireCost(dimensions,locations,types,orientations)
     thermalCostVal = thermalCost(dimensions,locations,heatDisps)
 
     # maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire = maxEstimatedCosts(dimensions,masses,types,heatDisps)
-    maxOverlap,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxCosts
+    maxConstraint,maxCM,maxOffAx,maxOnAx,maxWire,maxThermal = maxCosts
 
-    costList = [overlapCostVal/maxOverlap, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
+    costList = [constraintCostVal/maxConstraint, cmCostCalVal/maxCM, offAxisInertia/maxOffAx, onAxisInertia/maxOnAx, wireCostVal/maxWire, thermalCostVal/maxThermal]
     return costList
