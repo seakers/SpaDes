@@ -16,7 +16,7 @@ from CallCoverageAnalysis import tatcCovReqTransformer
 ### and outputs the mass of the spacecraft and the mass of the subsystems, along with a list of components. This is then used to estimate the cost of the mission.
 ### Interaction between the different modules is done through JSON files because this allows for more flexibility, though just passing objects around would probably be faster.
 
-### Define functions for chosing the payload and mission randomly
+### Goes through a full factorial enumeration of the payload and mission options to find the best combination
 
 def choosePayloadJSON(payloadData, payloadInd):
     """
