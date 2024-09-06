@@ -1,6 +1,8 @@
 import numpy as np
 import keras
 from keras import layers
+import keras_nlp
+from keras_nlp import layers as layers_nlp
 from ConfigurationCost import *
 import tensorflow as tf
 import scipy.signal
@@ -23,22 +25,34 @@ class Actor(tf.keras.Model):
         self.rotation_actions = 24 # 24 possible right angle orientations
         self.panel_actions = 2*num_panels # one for each side of each panel
         self.a_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002)
+        self.dense_dim = 128
 
-        self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
-        self.hidden_1 = layers.Dense(units=128, activation='relu')
-        self.hidden_2 = layers.Dense(units=128, activation='relu')
-        self.hidden_3 = layers.Dense(units=128, activation='relu')
+
+        # self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
+        # self.hidden_1 = layers.Dense(units=128, activation='relu')
+        # self.hidden_2 = layers.Dense(units=128, activation='relu')
+        # self.hidden_3 = layers.Dense(units=128, activation='relu')
+        # self.position_output_layer = layers.Dense(units=self.position_actions, activation='softmax')
+        # self.rotation_output_layer = layers.Dense(units=self.rotation_actions, activation='softmax')
+        # self.panel_output_layer = layers.Dense(units=self.panel_actions, activation='softmax')
+
+        self.decoder_1 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
+        self.decoder_2 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
+        self.decoder_3 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
         self.position_output_layer = layers.Dense(units=self.position_actions, activation='softmax')
         self.rotation_output_layer = layers.Dense(units=self.rotation_actions, activation='softmax')
         self.panel_output_layer = layers.Dense(units=self.panel_actions, activation='softmax')
 
     def call(self, inputs, act=0, training=False): # act is 0 for position actions, 1 for rotation actions, 2 for panel actions
-        # inputs --> (batch, state_dim)
-        x = inputs
-        x = self.input_layer(x)
-        x = self.hidden_1(x)
-        x = self.hidden_2(x)
-        x = self.hidden_3(x)
+        # Reshape or project input to match expected dimensions
+        x = tf.expand_dims(inputs, axis=2)  # Adding state dimension: (batch, sequence_dim, 1)
+        
+        # Pass through Transformer Decoder Layers
+        x = self.decoder_1(x)
+        x = self.decoder_2(x)
+        x = self.decoder_3(x)
+
+        # Process output based on `act` flag
         if act == 0:
             x = self.position_output_layer(x)
         elif act == 1:
@@ -46,7 +60,7 @@ class Actor(tf.keras.Model):
         elif act == 2:
             x = self.panel_output_layer(x)
 
-        return x
+        return tf.squeeze(x, axis=2)  # Remove the state dimension to match output
 
     def sample_configuration(self, observations, act):
         input_observations = []
@@ -140,23 +154,29 @@ class Critic(tf.keras.Model):
         self.state_dim = self.num_components * 4  # 60 vars (panel, x, y, rot) * components
         self.cost_values = 6 # number of cost values
         self.a_optimizer = tf.keras.optimizers.Adam()
-        self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
-        self.hidden_1 = layers.Dense(units=128, activation='relu')
-        self.hidden_2 = layers.Dense(units=128, activation='relu')
-        self.hidden_3 = layers.Dense(units=128, activation='relu')
+        self.dense_dim = 128
+        # self.input_layer = layers.Dense(units=self.state_dim, activation='linear')
+        # self.hidden_1 = layers.Dense(units=128, activation='relu')
+        # self.hidden_2 = layers.Dense(units=128, activation='relu')
+        # self.hidden_3 = layers.Dense(units=128, activation='relu')
+
+        self.decoder_1 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
+        self.decoder_2 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
+        self.decoder_3 = layers_nlp.TransformerDecoder(intermediate_dim=self.dense_dim, num_heads=1)
         self.output_layer = layers.Dense(units=self.cost_values, activation='linear') # One output for each cost (I hope)
 
     def call(self, inputs, training=False):
-        # inputs --> (batch, state_dim)
-        x = inputs
-        x = self.input_layer(x)
-        x = self.hidden_1(x)
-        x = self.hidden_2(x)
-        x = self.hidden_3(x)
+        # Reshape or project input to match expected dimensions
+        x = tf.expand_dims(inputs, axis=2)  # Adding state dimension: (batch, sequence_dim, 1)
+
+        # Pass through Transformer Decoder Layers
+        x = self.decoder_1(x)
+        x = self.decoder_2(x)
+        x = self.decoder_3(x)
         x = self.output_layer(x)
 
-        return x
-
+        return tf.squeeze(x, axis=2)  # Remove the state dimension to match output
+    
     def sample_critic(self, observations):
         input_observations = []
         for obs in observations:
@@ -184,7 +204,7 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 1500
+        epochs = 10
         num_components = len(components)
         num_panels = len(structPanels)
         actor, critic = get_models(num_components, num_panels)

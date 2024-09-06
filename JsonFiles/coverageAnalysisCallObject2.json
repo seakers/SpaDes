@@ -2,14 +2,14 @@
     "satellites": [
         {
             "orbit": {
-                "semiMajorAxis": 6571,
+                "semiMajorAxis": 6971,
                 "inclination": 60,
                 "eccentricity": 0,
                 "longAscendingNode": 0,
                 "argPeriapsis": 0,
                 "trueAnomaly": 0
             },
-            "FOV": 2.176977683729388
+            "FOV": 29.0
         }
     ],
     "samplePoints": {

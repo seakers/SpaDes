@@ -1,23 +1,23 @@
 {
     "payloads": [
         {
-            "mass": 12.1,
+            "mass": 1.0,
             "dimensions": [
-                0.216,
-                0.216,
-                0.304
+                0.107,
+                0.084,
+                0.238
             ],
-            "avgPower": 2.5,
-            "peakPower": 5.8,
-            "name": "multiscape200",
+            "avgPower": 4.0,
+            "peakPower": 4.0,
+            "name": "5mp space camera",
             "tempRange": [
-                -10.0,
-                50.0
+                -20.0,
+                55.0
             ],
-            "resolution": 0.618794418740825,
-            "FOV": 1.604177025611275,
-            "specRange": "VNIR",
-            "dataRate": 112.128
+            "resolution": 40.78125,
+            "FOV": 29.0,
+            "specRange": "Visible",
+            "dataRate": 80.0
         }
     ],
     "mission": {

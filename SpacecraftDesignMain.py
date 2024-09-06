@@ -77,11 +77,12 @@ def payloadMissionFFE(payloadData):
 
     # Define parameters
 
-    payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
+    # payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
+    payloads = [8] # Index of the payload to choose
 
     # Orbit
     rad = 6371 # km
-    semiMajorAxes = [200+rad,400+rad] # km
+    semiMajorAxes = [200+rad,400+rad,600+rad] # km
     inclinations = [60]
     eccentricites = [0]
     longAscendingNodes = [0] # deg

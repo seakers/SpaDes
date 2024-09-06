@@ -2,7 +2,8 @@ import numpy as np
 import pygad
 from copy import deepcopy
 from ConfigurationCost import *
-from RLOpt import RLWrapper
+# from RLOpt import RLWrapper
+from RLOptTransformer import RLWrapper
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
 
@@ -47,7 +48,7 @@ def on_generation(ga_instance):
 def GAOptimization(components,structPanels):
     # uses a GA to find the optimal spacecraft configuration
     # Parameters
-    num_generations = 750 # Number of generations.
+    num_generations = 10 # Number of generations.
     num_parents_mating = 32 # Number of solutions to be selected as parents in the mating pool.
 
     sol_per_pop = 128 # Number of solutions in the population.

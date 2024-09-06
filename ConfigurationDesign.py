@@ -79,7 +79,7 @@ for comp in componentList:
 maxCostList = maxCostComps(componentList,structPanelList)
 
 # Optimize
-numRuns = 20
+numRuns = 1
 
 # Genetic Algorithm
 # t00 = time.time()
@@ -129,7 +129,7 @@ plt.plot(minHVRL,color='tab:orange',linestyle='dotted')
 plt.fill_between(range(len(medianHVGA)), q1HVGA, q3HVGA, alpha=.5, linewidth=0, color='tab:blue')
 plt.fill_between(range(len(medianHVRL)), q1HVRL, q3HVRL, alpha=.5, linewidth=0, color='tab:orange')
 plt.legend(["Median Hypervolume GA","Median Hypervolume RL","Maximum Hypervolume GA","Minimum Hypervolume GA",
-            "Maximum Hypervolume RL","Minimum Hypervolume RL", "Interquartile Hypervolume GA","Interquartile Hypervolume RL"],loc="upper left")
+            "Maximum Hypervolume RL","Minimum Hypervolume RL", "Interquartile Hypervolume GA","Interquartile Hypervolume RL"],loc="lower right")
 plt.xlabel("Number of Function Evaluations")
 plt.ylabel("Hypervolume")
 plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")

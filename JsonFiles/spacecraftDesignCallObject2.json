@@ -1,27 +1,27 @@
 {
     "payloads": [
         {
-            "mass": 6.0,
+            "mass": 1.0,
             "dimensions": [
-                0.3,
-                0.145,
-                0.145
+                0.107,
+                0.084,
+                0.238
             ],
-            "avgPower": 10.0,
-            "peakPower": 14.0,
-            "name": "Monitor Imager",
+            "avgPower": 4.0,
+            "peakPower": 4.0,
+            "name": "5mp space camera",
             "tempRange": [
-                10.0,
-                30.0
+                -20.0,
+                55.0
             ],
-            "resolution": 0.8250592249872855,
-            "FOV": 2.176977683729388,
-            "specRange": "VNIR",
-            "dataRate": 480.0
+            "resolution": 40.78125,
+            "FOV": 29.0,
+            "specRange": "Visible",
+            "dataRate": 80.0
         }
     ],
     "mission": {
-        "semiMajorAxis": 6571,
+        "semiMajorAxis": 6971,
         "inclination": 60,
         "eccentricity": 0,
         "longAscendingNode": 0,
