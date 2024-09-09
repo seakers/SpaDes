@@ -1,0 +1,29 @@
+{
+    "satellites": [
+        {
+            "orbit": {
+                "semiMajorAxis": 7371.0,
+                "inclination": 60,
+                "eccentricity": 0,
+                "longAscendingNode": 0,
+                "argPeriapsis": 0,
+                "trueAnomaly": 0
+            },
+            "FOR": 22.1
+        }
+    ],
+    "samplePoints": {
+        "type": "grid",
+        "deltaLatitude": 5,
+        "deltaLongitude": 5,
+        "region": [
+            -180,
+            -50,
+            180,
+            50
+        ]
+    },
+    "start": "20240101",
+    "duration": 604800,
+    "analysisType": "U"
+}

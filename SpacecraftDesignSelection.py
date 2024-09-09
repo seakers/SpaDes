@@ -49,7 +49,9 @@ def loadJSONSCDesign(jsonPath, ind):
         eccentricity=missionDict['eccentricity'],
         longAscendingNode=missionDict['longAscendingNode'],
         argPeriapsis=missionDict['argPeriapsis'],
-        trueAnomaly=missionDict['trueAnomaly']
+        trueAnomaly=missionDict['trueAnomaly'],
+        numPlanes=1,
+        numSats=1
     )
 
     ## Load spreadsheets containing component data

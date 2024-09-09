@@ -1,0 +1,32 @@
+{
+    "payloads": [
+        {
+            "mass": 2.0,
+            "dimensions": [
+                0.2,
+                0.1,
+                0.1
+            ],
+            "avgPower": 10.0,
+            "peakPower": 10.0,
+            "name": "sLDU345",
+            "tempRange": [
+                -10.0,
+                50.0
+            ],
+            "resolution": 1.7936070108330142,
+            "FOV": 2.1,
+            "specRange": "Visible",
+            "dataRate": 6.0,
+            "FOR": 20
+        }
+    ],
+    "mission": {
+        "semiMajorAxis": 6471.0,
+        "inclination": 60,
+        "eccentricity": 0,
+        "longAscendingNode": 0,
+        "argPeriapsis": 0,
+        "trueAnomaly": 0
+    }
+}

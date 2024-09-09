@@ -9,7 +9,7 @@ from DeltaVBudget import *
 from EPSDesign import *
 from SCDesignClasses import *
 from SpacecraftDesignSelection import loadJSONSCDesign
-from CostEstimationJSON import loadJSONCostEstimation
+from CostEstimationJSON import loadJSONCostEstimationSingle
 from CallCoverageAnalysis import tatcCovReqTransformer
 
 ### Main script for running the SpaDes tool. Takes in a JSON file with an orbit and a payload (chosen randomly currently for testing) 
@@ -79,8 +79,8 @@ def payloadMissionFFE(payloadData):
 
     # Define parameters
 
-    payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
-    # payloads = [3] # Index of the payload to choose
+    # payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
+    payloads = [3] # Index of the payload to choose
     # swathWidths = [500] # km
     FOR = [20] # deg
 
@@ -88,7 +88,7 @@ def payloadMissionFFE(payloadData):
     rad = 6371 # km
     # semiMajorAxes = [200+rad,400+rad,600+rad] # km
     # semiMajorAxes = [200+rad] # km
-    semiMajorAxes = [x+rad for x in np.linspace(100,1000,11)] # km
+    semiMajorAxes = [x+rad for x in np.linspace(100,1000,2)] # km
     inclinations = [60]
     eccentricites = [0]
     longAscendingNodes = [0] # deg
@@ -120,7 +120,7 @@ def payloadMissionFFE(payloadData):
         # Call loadJSONSCDesign from SpacecraftDesignSelection.py
         scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile = loadJSONSCDesign("JsonFiles\spacecraftDesignCallObject" + str(ind) + ".json", ind)
 
-        totalMissionCost = loadJSONCostEstimation(costEstimationJSONFile) 
+        totalMissionCost = loadJSONCostEstimationSingle(costEstimationJSONFile) 
         harmonicMeanRevisit = tatcCovReqTransformer(coverageRequestJSONFile)
 
         allMissionCosts.append(totalMissionCost)

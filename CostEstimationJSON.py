@@ -51,6 +51,48 @@ def loadJSONCostEstimation(jsonPath):
 
     return allCosts
 
+def loadJSONCostEstimationSingle(jsonPath):
+    """
+    Function to load data for the spacecraft cost estimation module
+    """
+
+    with open(jsonPath) as file:
+        data = json.load(file)
+
+    mission = Mission(
+        satelliteDryMass=data['satelliteDryMass'],
+        structureMass=data['structureMass'],
+        propulsionMass=data['propulsionMass'],
+        ADCSMass=data['ADCSMass'],
+        avionicsMass=data['avionicsMass'],
+        thermalMass=data['thermalMass'],
+        EPSMass=data['EPSMass'],
+        satelliteBOLPower=data['satelliteBOLPower'],
+        satDataRatePerOrbit=data['satDataRatePerOrbit'],
+        lifetime=data['lifetime'],
+        numPlanes=data['numPlanes'],
+        numSats=data['numSats'],
+        instruments=[
+            Instrument(
+                trl=instrument['trl'],
+                mass=instrument['mass'],
+                avgPower=instrument['avgPower'],
+                dataRate=instrument['dataRate']
+            ) for instrument in data['instruments']
+        ],
+        launchVehicle=LaunchVehicle(
+            height=data['launchVehicle']['height'],
+            diameter=data['launchVehicle']['diameter'],
+            cost=data['launchVehicle']['cost']
+        )
+    )
+
+    mission = costEstimationManager(mission)
+
+    missionCost = mission.lifecycleCost
+
+    return missionCost
+
 # Create a JSON file to input into the function
 # data = {
 #     "satelliteDryMass": 1000,
