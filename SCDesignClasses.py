@@ -12,13 +12,15 @@ class Mission:
     Input variables and thier desired units/type:
     orbitType string
     """
-    def __init__(self, semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly):
+    def __init__(self, semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly, numPlanes, numSats):
         self.a = semiMajorAxis
         self.e = eccentricity
         self.i = inclination
         self.lan = longAscendingNode
         self.argp = argPeriapsis
         self.trueAnomaly = trueAnomaly
+        self.numPlanes = numPlanes
+        self.numSats = numSats
         # assuming earth orbit for now
         self.mu = 3.986e14 # m^3 s^-2
         self.rad = 6371 # km
@@ -36,8 +38,6 @@ class Mission:
         self.fractionSunlight = estimateFractionSunlight(self.a,self.rad)
         self.depthOfDischarge = estimateDepthofDischarge(self.orbitType)
         self.lifetime = 5 # chosen at random for now
-        self.numPlanes = 1
-        self.numSats = 1 # represent one sat on one orbit
         
 class Spacecraft:
     """

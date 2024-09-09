@@ -36,7 +36,9 @@ def loadJSONSCDesign(jsonPath, ind):
             resolution=payload['resolution'],
             FOV=payload['FOV'],
             specRange=payload['specRange'],
-            dataRate=payload['dataRate']
+            dataRate=payload['dataRate'],
+            FOR=payload['FOR']
+            # swathWidth=payload['swathWidth']
             )
         payloads.append(payloadComp)
     
@@ -171,7 +173,7 @@ def costEstimationJSON(payloads, mission, scMass, subsMass, components, ind):
 
 def coverageRequestJSON(payloads, mission, ind):
 
-    FOV = max([payload.FOV for payload in payloads])
+    FOR = max([payload.FOR + payload.FOV for payload in payloads])
 
     missionDict = {
         "semiMajorAxis": mission.a,
@@ -184,13 +186,14 @@ def coverageRequestJSON(payloads, mission, ind):
 
     satDicts = [{
         "orbit": missionDict,
-        "FOV": FOV
+        "FOR": FOR
+        # "swathWidth": swathWidth
     }]
 
     samplePoints = {
         "type": "grid", # can be grid or points
-        "deltaLatitude": 20,
-        "deltaLongitude": 20,
+        "deltaLatitude": 5,
+        "deltaLongitude": 5,
         "region": [-180,-50,180,50] # [lon1,lat1,lon2,lat2]
     }
 
@@ -201,7 +204,7 @@ def coverageRequestJSON(payloads, mission, ind):
 
     start = "20240101" # YYYYMMDD
 
-    duration = 7*24*60*60 # seconds
+    duration = 7*24*60*60 # one week in seconds
 
     analysisType = 'U'
 

@@ -11,39 +11,45 @@ def loadJSONCostEstimation(jsonPath):
     with open(jsonPath) as file:
         data = json.load(file)
 
-    mission = Mission(
-        satelliteDryMass=data['satelliteDryMass'],
-        structureMass=data['structureMass'],
-        propulsionMass=data['propulsionMass'],
-        ADCSMass=data['ADCSMass'],
-        avionicsMass=data['avionicsMass'],
-        thermalMass=data['thermalMass'],
-        EPSMass=data['EPSMass'],
-        satelliteBOLPower=data['satelliteBOLPower'],
-        satDataRatePerOrbit=data['satDataRatePerOrbit'],
-        lifetime=data['lifetime'],
-        numPlanes=data['numPlanes'],
-        numSats=data['numSats'],
-        instruments=[
-            Instrument(
-                trl=instrument['trl'],
-                mass=instrument['mass'],
-                avgPower=instrument['avgPower'],
-                dataRate=instrument['dataRate']
-            ) for instrument in data['instruments']
-        ],
-        launchVehicle=LaunchVehicle(
-            height=data['launchVehicle']['height'],
-            diameter=data['launchVehicle']['diameter'],
-            cost=data['launchVehicle']['cost']
+    allCosts = []
+
+    constellations = data['constellations']
+    for const in constellations:
+
+        mission = Mission(
+            satelliteDryMass=const['satelliteDryMass'],
+            structureMass=const['structureMass'],
+            propulsionMass=const['propulsionMass'],
+            ADCSMass=const['ADCSMass'],
+            avionicsMass=const['avionicsMass'],
+            thermalMass=const['thermalMass'],
+            EPSMass=const['EPSMass'],
+            satelliteBOLPower=const['satelliteBOLPower'],
+            satDataRatePerOrbit=const['satDataRatePerOrbit'],
+            lifetime=const['lifetime'],
+            numPlanes=const['numPlanes'],
+            numSats=const['numSats'],
+            instruments=[
+                Instrument(
+                    trl=instrument['trl'],
+                    mass=instrument['mass'],
+                    avgPower=instrument['avgPower'],
+                    dataRate=instrument['dataRate']
+                ) for instrument in const['instruments']
+            ],
+            launchVehicle=LaunchVehicle(
+                height=const['launchVehicle']['height'],
+                diameter=const['launchVehicle']['diameter'],
+                cost=const['launchVehicle']['cost']
+            )
         )
-    )
 
-    mission = costEstimationManager(mission)
+        mission = costEstimationManager(mission)
 
-    missionCost = mission.lifecycleCost
+        missionCost = mission.lifecycleCost
+        allCosts.append(missionCost)
 
-    return missionCost
+    return allCosts
 
 # Create a JSON file to input into the function
 # data = {

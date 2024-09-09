@@ -6,6 +6,7 @@ import pandas as pd
 
 from tatc.schemas import Instrument, Satellite as TATC_Satellite, TwoLineElements, Point
 from tatc.analysis import collect_multi_observations, aggregate_observations, reduce_observations
+from tatc.utils import swath_width_to_field_of_regard
 
 from eose.coverage import CoverageRecord, CoverageRequest, CoverageResponse
 from eose.grids import UniformAngularGrid
@@ -130,8 +131,10 @@ def tatcCovReqTransformer(jsonPath):
         argp = orbit["argPeriapsis"]
         trueAnomaly = orbit["trueAnomaly"]
 
-        # FOV = sat["FOV"]
-        FOV = 100 # the tatc FOV is really a field of regard
+        FOR = sat["FOR"]
+        # swathWidth = sat["swathWidth"]
+        # FOR = swath_width_to_field_of_regard(swathWidth*1000, (a-6371)*1000) # m
+        # FOR = 100 # km
 
         mu = 3.986e14
         P = 2*np.pi*np.sqrt((a*1000)**3/mu) # seconds
@@ -168,7 +171,7 @@ def tatcCovReqTransformer(jsonPath):
         
         satObj = Satellite(
             orbit=GeneralPerturbationsOrbitState.from_omm(adjSat),
-            field_of_view=FOV
+            field_of_view=FOR # really field of regard
         )
 
         satellites.append(satObj)

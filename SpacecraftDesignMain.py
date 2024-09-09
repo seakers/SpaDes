@@ -18,7 +18,7 @@ from CallCoverageAnalysis import tatcCovReqTransformer
 
 ### Goes through a full factorial enumeration of the payload and mission options to find the best combination
 
-def choosePayloadJSON(payloadData, payloadInd):
+def choosePayloadJSON(payloadData, payloadInd, FOR):
     """
     Chooses a random payload, extracts the data from the PayloadData Excel sheet, and makes a component object with that data
     """
@@ -38,7 +38,9 @@ def choosePayloadJSON(payloadData, payloadInd):
         'resolution':float(payloadData.loc[payloadInd,'Resolution (arcsec)']),
         'FOV':float(payloadData.loc[payloadInd,'FOV (degrees)']),
         'specRange':payloadData.loc[payloadInd,'Spectral Range'],
-        'dataRate':float(payloadData.loc[payloadInd,'Data Rate (Mbps)'])
+        'dataRate':float(payloadData.loc[payloadInd,'Data Rate (Mbps)']),
+        'FOR':FOR
+        # 'swathWidth':swathWidth
     } # need to change all numbers to float because they are read in as numpy types which JSON cannot handle
 
     print("Payload Chosen: ",payloadDict['name'])
@@ -77,25 +79,32 @@ def payloadMissionFFE(payloadData):
 
     # Define parameters
 
-    # payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
-    payloads = [8] # Index of the payload to choose
+    payloads = np.arange(len(payloadData['camera'])) # Index of the payload to choose
+    # payloads = [3] # Index of the payload to choose
+    # swathWidths = [500] # km
+    FOR = [20] # deg
 
     # Orbit
     rad = 6371 # km
-    semiMajorAxes = [200+rad,400+rad,600+rad] # km
+    # semiMajorAxes = [200+rad,400+rad,600+rad] # km
+    # semiMajorAxes = [200+rad] # km
+    semiMajorAxes = [x+rad for x in np.linspace(100,1000,11)] # km
     inclinations = [60]
     eccentricites = [0]
     longAscendingNodes = [0] # deg
     argPeriapses = [0] # deg
     trueAnomalies = [0] # deg
 
+    numSats = [1]
+    numOrbits = [1]
+
     allMissionCosts = []
     allHMeanRevisits = []
 
-    fullFactEnum = itertools.product(semiMajorAxes,inclinations,eccentricites,longAscendingNodes,argPeriapses,trueAnomalies,payloads)
+    fullFactEnum = itertools.product(semiMajorAxes,inclinations,eccentricites,longAscendingNodes,argPeriapses,trueAnomalies,payloads,FOR)
     for ind, vals in enumerate(fullFactEnum):
         missionDict = chooseMissionJSON(vals[0],vals[1],vals[2],vals[3],vals[4],vals[5])
-        payloadDict = choosePayloadJSON(payloadData['camera'], vals[6])
+        payloadDict = choosePayloadJSON(payloadData['camera'], vals[6], vals[7])
 
         SCDesignDict = {
             'payloads':[payloadDict],
@@ -148,9 +157,9 @@ payloadData = {"camera":cameraData}
 
 allMissionCosts, allHMeanRevisits = payloadMissionFFE(payloadData)
 
-plt.scatter(allMissionCosts,allHMeanRevisits)
-plt.xlabel("Total Lifecycle Cost")
-plt.ylabel("Harmonic Mean Revisit Time (hr)")
+plt.scatter(allHMeanRevisits,allMissionCosts)
+plt.ylabel("Total Lifecycle Cost")
+plt.xlabel("Harmonic Mean Revisit Time (hr)")
 plt.title("Total Lifecycle Cost vs Harmonic Mean Revisit Time")
 plt.show()
 

@@ -238,7 +238,7 @@ def estimate_total_mission_cost_recurring(mission):
     mission_cost = (bus + payl + prog + iat + ops) / 1000  # to $M
     
     S = 0.95  # 95% learning curve, means doubling N reduces average cost by 5%
-    N = numPlanes * numSats
+    N = numSats # different from vassar bc pau's code gives total number of sats as opposed to number of sats per plane
     B = -1 / (np.log(1 / S) / np.log(2))
     L = N ** B
     
