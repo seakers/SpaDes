@@ -6,6 +6,7 @@ from ConfigurationCost import *
 import scipy.signal
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
+import time
 
 
 def discounted_cumulative_sums(x, discount):
@@ -21,7 +22,7 @@ class Actor(nn.Module):
         self.rotation_actions = 24
         self.panel_actions = 2 * num_panels
         # self.dense_dim = 128
-        self.dense_dim = 64
+        self.dense_dim = 32
 
         
         # Encoder
@@ -29,7 +30,7 @@ class Actor(nn.Module):
 
         # Transformer blocks
         self.transformer_block_1 = self.create_transformer_block(self.dense_dim, num_heads=1)
-        self.transformer_block_2 = self.create_transformer_block(self.dense_dim, num_heads=1)
+        # self.transformer_block_2 = self.create_transformer_block(self.dense_dim, num_heads=1)
         # self.transformer_block_3 = self.create_transformer_block(self.dense_dim, num_heads=1)
 
         # Output layers for each action type
@@ -46,7 +47,7 @@ class Actor(nn.Module):
 
     def forward(self, inputs, act=0):
         actions = torch.fmod(torch.arange(0, inputs.size()[1]),4)+1
-        actions = actions.repeat(inputs.size()[0], 1)
+        actions = actions.repeat(inputs.size()[0], 1).to('cuda')
         x = torch.cat((inputs.unsqueeze(-1), actions.unsqueeze(-1)), dim=-1)
 
         # Pass through Encoder
@@ -54,7 +55,7 @@ class Actor(nn.Module):
 
         # Pass through Transformer Layers
         x = self.transformer_block_1(x)
-        x = self.transformer_block_2(x)
+        # x = self.transformer_block_2(x)
         # x = self.transformer_block_3(x)
 
         # Process output based on `act` flag
@@ -74,7 +75,7 @@ class Actor(nn.Module):
     def sample_configuration(self, observations, act):
         if len(observations[0]) == 0:
             observations = [[0] for x in range(len(observations))]
-        input_observations = torch.tensor(observations, dtype=torch.float32)
+        input_observations = torch.tensor(observations, dtype=torch.float32).to('cuda')
         output = self(input_observations, act=act)
 
         output_last = output[:,-1,:]
@@ -159,14 +160,14 @@ class Critic(nn.Module):
         self.state_dim = 4 * num_components
         self.num_objectives = 6
         # self.dense_dim = 128
-        self.dense_dim = 64
+        self.dense_dim = 32
 
         # Encoder
         self.encoder = nn.Linear(2, self.dense_dim)
 
         # Transformer blocks
         self.transformer_block_1 = self.create_transformer_block(self.dense_dim, num_heads=1)
-        self.transformer_block_2 = self.create_transformer_block(self.dense_dim, num_heads=1)
+        # self.transformer_block_2 = self.create_transformer_block(self.dense_dim, num_heads=1)
         # self.transformer_block_3 = self.create_transformer_block(self.dense_dim, num_heads=1)
 
         # Output layer
@@ -180,7 +181,7 @@ class Critic(nn.Module):
 
     def forward(self, inputs):
         actions = torch.fmod(torch.arange(0, inputs.size()[1]),4)+1
-        actions = actions.repeat(inputs.size()[0], 1)
+        actions = actions.repeat(inputs.size()[0], 1).to('cuda')
         x = torch.cat((inputs.unsqueeze(-1), actions.unsqueeze(-1)), dim=-1)
 
         # Pass through Encoder
@@ -188,7 +189,7 @@ class Critic(nn.Module):
 
         # Pass through Transformer Layers
         x = self.transformer_block_1(x)
-        x = self.transformer_block_2(x)
+        # x = self.transformer_block_2(x)
         # x = self.transformer_block_3(x)
         x = self.output_layer(x)
         x = F.softmax(x, dim=-1)
@@ -196,19 +197,20 @@ class Critic(nn.Module):
         return x
 
     def sample_critic(self, observations):
-        input_observations = torch.tensor(observations, dtype=torch.float32)
+        input_observations = torch.tensor(observations, dtype=torch.float32).to('cuda')
         output = self(input_observations)
         output_last = output[:,-1,:]
         
         return output_last
 
     def ppo_update(self, observation, return_buffer):
-        pred_values = self.forward(observation)[:,-1,:]
+        pred_values = self(observation)[:,-1,:]
         value_loss = torch.mean((return_buffer - pred_values) ** 2)
 
         self.optimizer.zero_grad()
         value_loss.backward()
         self.optimizer.step()
+
 
         return value_loss.item()
 
@@ -216,7 +218,7 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 10
+        epochs = 1000
         num_components = len(components)
         num_panels = len(structPanels)
         actor, critic = get_models(num_components, num_panels)
@@ -236,39 +238,39 @@ class RLWrapper():
             allLoss.append(loss)
             allKL.append(kl)
 
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
 
-        plt.figure(figsize=(15, 5))
+        # plt.figure(figsize=(15, 5))
 
-        # Subplot for C Loss
-        plt.subplot(1, 3, 1)
-        plt.plot(range(epochs), allCLoss, label='C Loss', color='blue')
-        plt.xlabel('Epochs')
-        plt.ylabel('Critic Loss')
-        plt.title('Critic Loss vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for C Loss
+        # plt.subplot(1, 3, 1)
+        # plt.plot(range(epochs), allCLoss, label='C Loss', color='blue')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('Critic Loss')
+        # plt.title('Critic Loss vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        # Subplot for Loss
-        plt.subplot(1, 3, 2)
-        plt.plot(range(epochs), allLoss, label='Loss', color='orange')
-        plt.xlabel('Epochs')
-        plt.ylabel('Actor Loss')
-        plt.title('Actor Loss vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for Loss
+        # plt.subplot(1, 3, 2)
+        # plt.plot(range(epochs), allLoss, label='Loss', color='orange')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('Actor Loss')
+        # plt.title('Actor Loss vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        # Subplot for KL
-        plt.subplot(1, 3, 3)
-        plt.plot(range(epochs), allKL, label='KL Divergence', color='green')
-        plt.xlabel('Epochs')
-        plt.ylabel('KL Divergence')
-        plt.title('KL Divergence vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for KL
+        # plt.subplot(1, 3, 3)
+        # plt.plot(range(epochs), allKL, label='KL Divergence', color='green')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('KL Divergence')
+        # plt.title('KL Divergence vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        plt.tight_layout()
-        plt.show()
+        # plt.tight_layout()
+        # plt.show()
 
         pfSolutions = HVgrid.paretoFrontSolution
         pfCosts = HVgrid.paretoFrontPoint
@@ -281,7 +283,12 @@ def get_models(num_components, num_panels):
     actor = Actor(num_components=num_components, num_panels=num_panels)
     critic = Critic(num_components=num_components)
 
-    inputs = torch.zeros(size=(num_components*4,1))
+    actor = actor.to('cuda')
+    critic = critic.to('cuda')
+    # actor = nn.DataParallel(actor).to('cuda')
+    # critic = nn.DataParallel(critic).to('cuda')
+
+    inputs = torch.zeros(size=(num_components*4,1)).to('cuda')
     actor(inputs)
     critic(inputs)
 
@@ -289,7 +296,9 @@ def get_models(num_components, num_panels):
 
 
 def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV):
-    mini_batch_size = 128
+    # time everything
+    # t0 = time.time()
+    mini_batch_size = 32
     num_actions = len(components) * 4
 
     rewards = [[] for x in range(mini_batch_size)]
@@ -299,6 +308,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
 
     observation = [[] for x in range(mini_batch_size)]
     critic_observations = [[] for x in range(mini_batch_size)]
+
+    # t1 = time.time()
+    # print("Time to initialize: ", t1-t0)
 
 
     # 1. Sample actor
@@ -313,8 +325,8 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
         log_probs, sel_actions, all_action_probs = actor.sample_configuration(observation, act)
         # print(all_action_probs)
 
-        log_probs = log_probs.detach().numpy()
-        sel_actions = sel_actions.numpy().tolist()
+        log_probs = log_probs.tolist()
+        sel_actions = sel_actions.tolist()
         for idx, action in enumerate(sel_actions):
             if act == 0: # panel
                 panel_norm = np.linspace(0, 1, 2*len(structPanels))
@@ -338,6 +350,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             actions[idx].append(action)
             logprobs[idx].append(log_probs[idx])
             rewards[idx].append([0,0,0,0,0,0])
+
+    # t2 = time.time()
+    # print("Time to sample: ", t2-t1)
 
     # Post processing
     # - transform flattened design to configuration
@@ -368,6 +383,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
         cost.append(adjustCostVals)
         rewards[idx][-1] = cost[-1]
 
+    # t3 = time.time()
+    # print("Time to evaluate: ", t3-t2)
+
     # Sample Critic
     critic_values = []
     for action_idx in range(num_actions):
@@ -380,6 +398,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
         crit_vals = critic.sample_critic(critic_observations)
         crit_vals = crit_vals.squeeze().tolist()
         critic_values.append(crit_vals)
+
+    # t4 = time.time()
+    # print("Time to sample critic: ", t4-t3)
     
     values = [[] for x in range(mini_batch_size)]
     for act_idx, act_vals in enumerate(critic_values):
@@ -388,6 +409,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
 
     for idx in range(mini_batch_size):
         values[idx].append(values[idx][-1])
+
+    # t5 = time.time()
+    # print("Time to process values: ", t5-t4)
     
 
     gamma = 0.99
@@ -411,6 +435,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
     )
     all_advantages = (all_advantages - advantage_mean) / advantage_std
 
+    # t6 = time.time()
+    # print("Time to compute advantages: ", t6-t5)
+
     observation_tensor = []
     action_tensor = []
     logprob_tensor = []
@@ -428,11 +455,14 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             advantage_tensor.append(all_advantages[batch_element_idx][idx])
             return_tensor.append(all_returns[batch_element_idx][idx])
 
-    observation_tensor = torch.tensor(observation_tensor, dtype=torch.float32)
-    action_tensor = torch.tensor(action_tensor, dtype=torch.int32)
-    logprob_tensor = torch.tensor(logprob_tensor, dtype=torch.float32)
-    advantage_tensor = torch.tensor(np.array(advantage_tensor), dtype=torch.float32)
-    return_tensor = torch.tensor(np.array(return_tensor), dtype=torch.float32)
+    observation_tensor = torch.tensor(observation_tensor, dtype=torch.float32).to('cuda')
+    action_tensor = torch.tensor(action_tensor, dtype=torch.int32).to('cuda')
+    logprob_tensor = torch.tensor(logprob_tensor, dtype=torch.float32).to('cuda')
+    advantage_tensor = torch.tensor(np.array(advantage_tensor), dtype=torch.float32).to('cuda')
+    return_tensor = torch.tensor(np.array(return_tensor), dtype=torch.float32).to('cuda')
+
+    # t7 = time.time()
+    # print("Time to create tensors: ", t7-t6)
 
     targetkl = 0.01
     actor_iterations = 5
@@ -448,12 +478,19 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             break
     # print("Actor Loss: ", loss)
 
+    # t8 = time.time()
+    # print("Time to update actor: ", t8-t7)
+
     critic_iterations = 5
     for i in range(critic_iterations):
         c_loss = critic.ppo_update(
             observation_tensor,
             return_tensor
         )
+
+    # t9 = time.time()
+    # print("Time to update critic: ", t9-t8)
+    
     print('Critic Loss: ', c_loss, '\nActor Loss: ', loss, '\nAvg Cost: ', np.mean(cost,0), "\n")
 
 

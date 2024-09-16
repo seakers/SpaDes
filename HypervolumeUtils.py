@@ -13,7 +13,7 @@ class HypervolumeGrid:
         """
         Function to initialize the hypervolume grid with the reference point
         """
-        self.gridSize = 11 # maybe change this to have different resolution closer to the best point
+        self.gridSize = 15 # maybe change this to have different resolution closer to the best point
         self.HVMax = np.prod(self.refPoint)
 
         exp = np.arange(len(self.refPoint)-1,-1,-1)

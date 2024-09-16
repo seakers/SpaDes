@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 
 # Check if PyTorch is using a CPU
-device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
-print(f"Using device: {device}")
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 # # Custom Transformer-based Policy Network
 # class ConfigurationTransformer(nn.Module):
