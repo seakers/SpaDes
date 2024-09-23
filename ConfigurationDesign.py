@@ -85,7 +85,7 @@ def main():
     maxCostList = maxCostComps(componentList,structPanelList)
 
     # Optimize
-    numRuns = 1
+    numRuns = 20
 
     # Genetic Algorithm
     # t00 = time.time()

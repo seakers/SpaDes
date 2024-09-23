@@ -260,39 +260,39 @@ class RLWrapper():
             allKL.append(kl)
             avgCosts.append(avgCost)
 
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
 
-        plt.figure(figsize=(15, 5))
+        # plt.figure(figsize=(15, 5))
 
-        # Subplot for C Loss
-        plt.subplot(1, 3, 1)
-        plt.plot(range(epochs), allCLoss, label='C Loss', color='blue')
-        plt.xlabel('Epochs')
-        plt.ylabel('Critic Loss')
-        plt.title('Critic Loss vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for C Loss
+        # plt.subplot(1, 3, 1)
+        # plt.plot(range(epochs), allCLoss, label='C Loss', color='blue')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('Critic Loss')
+        # plt.title('Critic Loss vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        # Subplot for Loss
-        plt.subplot(1, 3, 2)
-        plt.plot(range(epochs), allLoss, label='Loss', color='orange')
-        plt.xlabel('Epochs')
-        plt.ylabel('Actor Loss')
-        plt.title('Actor Loss vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for Loss
+        # plt.subplot(1, 3, 2)
+        # plt.plot(range(epochs), allLoss, label='Loss', color='orange')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('Actor Loss')
+        # plt.title('Actor Loss vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        # Subplot for KL
-        plt.subplot(1, 3, 3)
-        plt.plot(range(epochs), allKL, label='KL Divergence', color='green')
-        plt.xlabel('Epochs')
-        plt.ylabel('KL Divergence')
-        plt.title('KL Divergence vs Epochs')
-        plt.grid()
-        plt.legend()
+        # # Subplot for KL
+        # plt.subplot(1, 3, 3)
+        # plt.plot(range(epochs), allKL, label='KL Divergence', color='green')
+        # plt.xlabel('Epochs')
+        # plt.ylabel('KL Divergence')
+        # plt.title('KL Divergence vs Epochs')
+        # plt.grid()
+        # plt.legend()
 
-        plt.tight_layout()
-        plt.show()
+        # plt.tight_layout()
+        # plt.show()
 
         print('Finished')
         return epochs,allHV,HVgrid,avgCosts
@@ -488,7 +488,7 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
     # t7 = time.time()
     # print("Time to create tensors: ", t7-t6)
 
-    targetkl = 0.005
+    targetkl = 0.01
     actor_iterations = 5
     for i in range(actor_iterations):
         loss,kl = actor.ppo_update(
