@@ -21,7 +21,7 @@ def profile_script():
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.print_stats()
     
-    with open('profiling_results.txt', 'w') as f:
+    with open('profiling_results_slow.txt', 'w') as f:
         f.write(s.getvalue())
 
 if __name__ == "__main__":

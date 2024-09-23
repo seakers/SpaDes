@@ -3,7 +3,10 @@ import pygad
 from copy import deepcopy
 from ConfigurationCost import *
 # from RLOpt import RLWrapper
-from RLOptTransformer import RLWrapper
+# from RLOptPyTorch import RLWrapper
+# from RLOptPyTorchFast import RLWrapper
+# from RLOptTransformer import RLWrapper
+from RLOptPyTorchRandomWeights import RLWrapper
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
 
@@ -40,18 +43,21 @@ def GAFitnessFunc(GAInstance,solution,solutionIDX):
 
 def on_generation(ga_instance):
     global last_fitness
+    global allCosts
+    global avgCosts
+    genAvgCost = np.mean(np.array(allCosts),0)
     print(f"Generation = {ga_instance.generations_completed}")
-    print(f"Fitness    = {ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]}")
-    print(f"Change     = {ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1] - last_fitness}")
-    last_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
+    print(f"Avg Cost = {genAvgCost}\n")
+    avgCosts.append(genAvgCost)
+    allCosts = []
 
 def GAOptimization(components,structPanels):
     # uses a GA to find the optimal spacecraft configuration
     # Parameters
-    num_generations = 1000 # Number of generations.
-    num_parents_mating = 8 # Number of solutions to be selected as parents in the mating pool.
+    num_generations = 500 # Number of generations.
+    num_parents_mating = 16 # Number of solutions to be selected as parents in the mating pool.
 
-    sol_per_pop = 32 # Number of solutions in the population.
+    sol_per_pop = 64 # Number of solutions in the population.
     num_genes = len(components)*4 # With Rotations
     save_best_solutions = True
     gene_space = [None] * num_genes
@@ -72,12 +78,14 @@ def GAOptimization(components,structPanels):
 
     global NFE
     global allCosts
+    global avgCosts
     global HVgrid
     global allHV
 
     NFE = 0
     allHV = []
     allCosts = []
+    avgCosts = []
     HVgrid = HypervolumeGrid([1,1,1,1,1,1])
     allHV = []
 
@@ -85,7 +93,6 @@ def GAOptimization(components,structPanels):
                        num_parents_mating=num_parents_mating,
                        sol_per_pop=sol_per_pop,
                        num_genes=num_genes,
-                       save_best_solutions=save_best_solutions,
                        gene_space=gene_space,
                        parent_selection_type=parent_selection_type,
                        fitness_func=GAFitnessFunc,
@@ -93,12 +100,8 @@ def GAOptimization(components,structPanels):
     
     # Running the GA to optimize the parameters of the function.
     ga_instance.run()
-
-
-    pfSolutions = HVgrid.paretoFrontSolution
-    pfCosts = HVgrid.paretoFrontPoint
         
-    return num_generations,allHV,pfSolutions,pfCosts
+    return num_generations,allHV,HVgrid,avgCosts
 
 def optimization(components,structPanelList,maxCostList,optMethod):
     # Minimize the cost of the configuration
@@ -110,12 +113,12 @@ def optimization(components,structPanelList,maxCostList,optMethod):
     structPanels = structPanelList
 
     if optMethod == "GA":
-        num_generations,allHV,pfSolutions,pfCosts = GAOptimization(components,structPanels)
+        num_generations,allHV,HVgrid,avgCosts = GAOptimization(components,structPanels)
 
     elif optMethod == "RL":
-        num_generations,allHV,pfSolutions,pfCosts = RLWrapper.run(components,structPanels,maxCostList)
+        num_generations,allHV,HVgrid,avgCosts = RLWrapper.run(components,structPanels,maxCostList)
 
-    return num_generations,allHV,pfSolutions,pfCosts
+    return num_generations,allHV,HVgrid,avgCosts
 
 ### UNUSED CODE
 

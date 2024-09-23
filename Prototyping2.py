@@ -1,129 +1,84 @@
-import torch
-import torch.nn as nn
+from HypervolumeUtils import HypervolumeGrid, ParetoFront, getParetoFront
+from pymoo.indicators.hv import HV
+import numpy as np
+import matplotlib.pyplot as plt
+import time
 
-# Check if PyTorch is using a CPU
+costs = np.random.rand(200, 6)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+t0 = time.time()
+print("PyMoo With Pareto")
+hvPymoo = HV(ref_point=[1, 1, 1, 1, 1, 1])
 
-# # Custom Transformer-based Policy Network
-# class ConfigurationTransformer(nn.Module):
-#     def __init__(self, input_dim, d_model=128, nhead=4, num_layers=2, output_dim=4):
-#         super(ConfigurationTransformer, self).__init__()
-#         # Input embedding to project the input dimension to the model dimension
-#         self.embedding = nn.Linear(input_dim, d_model)
-#         # Transformer model
-#         self.transformer = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_layers, num_decoder_layers=num_layers)
-#         # Output layer to project the model dimension to the output dimension (4 parameters to configure)
-#         self.fc = nn.Linear(d_model, output_dim)
+hvListPymoo = []
 
-#     def forward(self, src):
-#         # Add positional encoding to the input
-#         src = self.embedding(src)
-#         # Transformer expects input in (sequence_length, batch_size, d_model)
-#         # src = src.permute(1, 0, 2)
-#         # Pass through transformer
-#         transformer_output = self.transformer(src, src)
-#         # Get the output for the last step (for autoregressive output)
-#         logits = self.fc(transformer_output[-1])
-#         return logits
+pf = ParetoFront()
+for cost in costs:
+    pf.updatePF(cost)
 
-# # Example Usage
-# if __name__ == "__main__":
-#     # Assuming each input state is a tensor of size (batch_size, input_dim)
-#     seq_len = 10
-#     batch_size = 4
-#     input_dim = 1  # Example input dimension (state representation size)
-#     output_dim = 4
+    hvListPymoo.append(hvPymoo(pf.paretoFront))
 
-#     # Dummy input state for testing
-#     input_state = torch.rand(batch_size, input_dim)
+t1 = time.time()
+print("Alex Without Pareto")
+hvAlex = HypervolumeGrid([1, 1, 1, 1, 1, 1])
 
-#     # Initialize transformer policy network
-#     policy_net = ConfigurationTransformer(input_dim=input_dim, output_dim=output_dim)
+hvListAlex = []
 
-#     # Forward pass
-#     logits = policy_net(input_state)
-#     print("Logits:", logits)
+for cost in costs:
+    hvAlex.updateHV(cost)
+    hvListAlex.append(hvAlex.getHV())
 
+t2 = time.time()
+print("PyMoo Without Pareto")
+hvPymoo2 = HV(ref_point=[1, 1, 1, 1, 1, 1])
 
-# # Environment Configuration (Stub)
-# class ConfigurationEnv:
-#     def __init__(self, components):
-#         self.components = components
-#         # Define the observation space, action space, etc.
-        
-#     def reset(self):
-#         # Reset the environment to the initial state
-#         return initial_state
+hvListPymoo2 = []
 
-#     def step(self, action):
-#         # Apply action to environment, return next_state, reward, done, info
-#         next_state = None
-#         reward = None
-#         done = False
-#         info = {}
-#         return next_state, reward, done, info
+for i in range(len(costs)):
 
-# # Transformer-based Policy Network
-# class TransformerPolicy(nn.Module):
-#     def __init__(self, input_dim, output_dim):
-#         super(TransformerPolicy, self).__init__()
-#         config = GPT2Config(vocab_size=100, n_positions=128, n_embd=128, n_layer=2, n_head=2)
-#         self.transformer = GPT2Model(config)
-#         self.fc = nn.Linear(config.n_embd, output_dim)
-    
-#     def forward(self, x):
-#         x = self.transformer(x)[0]  # Get the last hidden state
-#         logits = self.fc(x[:, -1, :])  # Take the last token's output
-#         return logits
+    hvListPymoo2.append(hvPymoo2(costs[:i+1]))
 
-# # PPO Agent
-# class PPOAgent:
-#     def __init__(self, env, policy_net, lr=1e-4, gamma=0.99, clip_epsilon=0.2):
-#         self.env = env
-#         self.policy_net = policy_net
-#         self.optimizer = Adam(self.policy_net.parameters(), lr=lr)
-#         self.gamma = gamma
-#         self.clip_epsilon = clip_epsilon
+t3 = time.time()
+print("Alex With Pareto")
+hvAlex2 = HypervolumeGrid([1, 1, 1, 1, 1, 1])
 
-#     def select_action(self, state):
-#         with torch.no_grad():
-#             logits = self.policy_net(state)
-#             action_probs = torch.softmax(logits, dim=-1)
-#             action = torch.multinomial(action_probs, 1)
-#         return action.item()
+hvListAlex2 = []
 
-#     def compute_advantages(self, rewards, values, dones):
-#         # Compute advantages using GAE or another method
-#         advantages = []
-#         return advantages
+pf2 = ParetoFront()
+for cost in costs:
+    pf2.updatePF(cost)
+    if (pf2.paretoFront[-1] == cost).all():
+        hvAlex2.updateHV(cost)
+    hvListAlex2.append(hvAlex2.getHV())
 
-#     def update_policy(self, trajectories):
-#         # Extract states, actions, rewards, etc., from trajectories
-#         for state, action, reward, next_state, done in trajectories:
-#             # Calculate advantages and update the policy
-#             pass
+t4 = time.time()
 
-#     def train(self, episodes=1000):
-#         for episode in range(episodes):
-#             state = self.env.reset()
-#             done = False
-#             trajectories = []
-            
-#             while not done:
-#                 action = self.select_action(state)
-#                 next_state, reward, done, _ = self.env.step(action)
-#                 trajectories.append((state, action, reward, next_state, done))
-#                 state = next_state
+print('PyMoo time Pareto: ', t1-t0)
+print('Alex time No Pareto: ', t2-t1)
+print('PyMoo time No Pareto: ', t3-t2)
+print('Alex time Pareto: ', t4-t3)
 
-#             # Update policy based on collected trajectories
-#             self.update_policy(trajectories)
+# Plot the hypervolumes for all functions
+plt.figure(figsize=(12, 12))
 
-# if __name__ == "__main__":
-#     components = [...]  # Define your list of components
-#     env = ConfigurationEnv(components)
-#     policy_net = TransformerPolicy(input_dim=128, output_dim=4)  # Define input/output dimensions
+# Plot the hypervolumes for the functions with Pareto
+plt.subplot(2, 1, 1)
+plt.plot(hvListPymoo, color='blue', label='Hypervolume - PyMoo with Pareto')
+plt.plot(hvListAlex2, color='orange', label='Hypervolume - Alex with Pareto')
+plt.xlabel('Iteration')
+plt.ylabel('Hypervolume')
+plt.title('Hypervolume Convergence with Pareto')
+plt.legend()
 
-#     agent = PPOAgent(env, policy_net)
-#     agent.train()
+# Plot the hypervolumes for the functions without Pareto
+plt.subplot(2, 1, 2)
+plt.plot(hvListAlex, color='red', label='Hypervolume - Alex without Pareto')
+plt.plot(hvListPymoo2, color='green', label='Hypervolume - PyMoo without Pareto')
+plt.xlabel('Iteration')
+plt.ylabel('Hypervolume')
+plt.title('Hypervolume Convergence without Pareto')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+

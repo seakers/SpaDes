@@ -85,15 +85,17 @@ def main():
     maxCostList = maxCostComps(componentList,structPanelList)
 
     # Optimize
-    numRuns = 20
+    numRuns = 1
 
     # Genetic Algorithm
     # t00 = time.time()
     allHVGA = []
+    allAvgCostsGA = []
     for runGA in range(numRuns):
         print("\n\n\nRUN: ", runGA, "\n\n")
-        numStepsGA, allHVGARun, pfSolutionsGA, pfCostsGA = optimization(componentList,structPanelList,maxCostList,"GA")
+        numStepsGA, allHVGARun, HVgridGA, avgCostsGA = optimization(componentList,structPanelList,maxCostList,"GA")
         allHVGA.append(allHVGARun)
+        allAvgCostsGA.append(avgCostsGA)
     # t01 = time.time()
     # print("Time for RL2: ", (t01-t00)/numRuns)
 
@@ -105,15 +107,20 @@ def main():
         i+=1
     # t10 = time.time()
     allHVRL = []
+    allAvgCostsRL = []
     for runRL in range(numRuns):
         print("RUN: ", runRL, "\n\n")
-        numStepsRL, allHVRLRun, pfSolutionsRL, pfCostsRL = optimization(componentList,structPanelList,maxCostList,"RL")
+        numStepsRL, allHVRLRun, HVgridRL, avgCostsRL = optimization(componentList,structPanelList,maxCostList,"RL")
         allHVRL.append(allHVRLRun)
+        allAvgCostsRL.append(avgCostsRL)
     # t11 = time.time()
     # print("Time for RLE: ", (t11-t10)/numRuns)
 
     allHVGA = np.array(allHVGA)
     allHVRL = np.array(allHVRL)
+    allAvgCostsGA = np.array(allAvgCostsGA)
+    allAvgCostsRL = np.array(allAvgCostsRL)
+
     medianHVGA = np.median(allHVGA,0)
     medianHVRL = np.median(allHVRL,0)
     q1HVGA = np.quantile(allHVGA,.25,axis=0)
@@ -124,8 +131,19 @@ def main():
     minHVGA = np.min(allHVGA,0)
     maxHVRL = np.max(allHVRL,0)
     minHVRL = np.min(allHVRL,0)
-    # stdHVRL = np.std(allHVRL,0)
 
+    medianAvgCostsGA = np.median(allAvgCostsGA,0)
+    medianAvgCostsRL = np.median(allAvgCostsRL,0)
+    q1AvgCostsGA = np.quantile(allAvgCostsGA,.25,axis=0)
+    q3AvgCostsGA = np.quantile(allAvgCostsGA,.75,axis=0)
+    q1AvgCostsRL = np.quantile(allAvgCostsRL,.25,axis=0)
+    q3AvgCostsRL = np.quantile(allAvgCostsRL,.75,axis=0)
+    maxAvgCostsGA = np.max(allAvgCostsGA,0)
+    minAvgCostsGA = np.min(allAvgCostsGA,0)
+    maxAvgCostsRL = np.max(allAvgCostsRL,0)
+    minAvgCostsRL = np.min(allAvgCostsRL,0)
+
+    plt.figure()
     plt.plot(medianHVGA,color='tab:blue')
     plt.plot(medianHVRL,color='tab:orange')
     plt.plot(maxHVGA,color='tab:blue',linestyle='dashed')
@@ -141,111 +159,162 @@ def main():
     plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
     plt.show()
 
-    # configure last pf solution into dims and locs to visualize
-    allDimsGA = []
-    allLocsGA = []
-    allTypesGA = []
-    solutionGA = pfSolutionsGA[-1]
 
-    allDimsRL = []
-    allLocsRL = []
-    allTypesRL = []
-    solutionRL = pfSolutionsRL[-1]
+    fig, axs = plt.subplots(2, 3, figsize=(18, 10))  # Increase the figure width to make space for the legend
+    cost_labels = ["Overlap", "Moment of Inertia", "Product of Inertia", "Center of Mass", "Wire Length", "Thermal Variance"]
 
-    surfNormal = np.array([0,0,1])
-    for i in range(len(componentList)):
-        # GA
-        allTypesGA.append(componentList[i].type)
+    for i in range(6):
+        row = i // 3
+        col = i % 3
+        axs[row, col].plot(medianAvgCostsGA[:, i], color='tab:blue')
+        axs[row, col].plot(medianAvgCostsRL[:, i], color='tab:orange')
+        axs[row, col].plot(maxAvgCostsGA[:, i], color='tab:blue', linestyle='dashed')
+        axs[row, col].plot(minAvgCostsGA[:, i], color='tab:blue', linestyle='dotted')
+        axs[row, col].plot(maxAvgCostsRL[:, i], color='tab:orange', linestyle='dashed')
+        axs[row, col].plot(minAvgCostsRL[:, i], color='tab:orange', linestyle='dotted')
+        axs[row, col].fill_between(range(len(medianAvgCostsGA[:, i])), q1AvgCostsGA[:, i], q3AvgCostsGA[:, i], alpha=.5, linewidth=0, color='tab:blue')
+        axs[row, col].fill_between(range(len(medianAvgCostsRL[:, i])), q1AvgCostsRL[:, i], q3AvgCostsRL[:, i], alpha=.5, linewidth=0, color='tab:orange')
+        axs[row, col].set_title(cost_labels[i])
+        axs[row, col].set_xlabel("Number of Function Evaluations")
+        axs[row, col].set_ylabel("Average Objective")
 
-        transMat = getOrientation(int(solutionGA[4*i+3]))
-        orientation = transMat
+    # Move the legend closer to the plot
+    fig.legend(["Median Average Objective GA", "Median Average Objective RL", 
+                "Maximum Average Objective GA", "Minimum Average Objective GA",
+                "Maximum Average Objective RL", "Minimum Average Objective RL", 
+                "Interquartile Average Objective GA", "Interquartile Average Objective RL"], 
+            loc="center right")
 
-        panelChoice = structPanelList[int(solutionGA[4*i]%len(structPanelList))]
-        if solutionGA[4*i] >= len(structPanelList):
-            surfNormal = surfNormal * -1
-        
-        surfLoc = np.matmul(panelChoice.orientation,np.multiply([solutionGA[4*i+1],solutionGA[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
-        allLocsGA.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(componentList[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
-
-        allDimsGA.append(np.matmul(transMat,componentList[i].dimensions))
-
-        # RL
-        allTypesRL.append(componentList[i].type)
-
-        transMat = getOrientation(int(solutionRL[4*i+3]))
-        orientation = transMat
-
-        panelChoice = structPanelList[int(solutionRL[4*i]%len(structPanelList))]
-        if solutionRL[4*i] >= len(structPanelList):
-            surfNormal = surfNormal * -1
-
-        surfLoc = np.matmul(panelChoice.orientation,np.multiply([solutionRL[4*i+1],solutionRL[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
-        allLocsRL.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(componentList[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
-
-        allDimsRL.append(np.matmul(transMat,componentList[i].dimensions))
-
-    panelDims = []
-    panelLocs = []
-    for panel in structPanelList:
-        panelLocs.append(panel.location)
-        panelDims.append(np.matmul(panel.orientation,panel.dimensions))
-
-
-    # Create Figure
-    fig1 = plt.figure()
-    ax1 = fig1.add_subplot(111, projection='3d')
-
-    # Plot Adjustment
-    ax1.set_xlim(-1,1)
-    ax1.set_ylim(-1,1)
-    ax1.set_zlim(-1,1)
-    ax1.set_aspect('equal')
-
-    objColor = tuple(np.random.rand(len(componentList),3))
-
-    proxyPointsGA = []
-    for i in range(len(componentList)):
-        xGA,yGA,zGA = getCube(allDimsGA[i],allLocsGA[i])
-        plot1 = ax1.plot_surface(xGA,yGA,zGA, color=objColor[i], label=allTypesGA[i])
-        point = ax1.scatter(allLocsGA[i][0],allLocsGA[i][1],allLocsGA[i][2],color=objColor[i])
-        proxyPointsGA.append(point)
-
-
-    for j in range(len(structPanelList)):
-        xPanel,yPanel,zPanel = getCube(panelDims[j],panelLocs[j])
-        plot1 = ax1.plot_surface(xPanel,yPanel,zPanel, alpha=0.1, color='tab:gray')
-
-    plt.title("Visualization of Configuration GA")
-    plt.legend(proxyPointsGA,allTypesGA)
-
-    # Create Figure
-    fig1 = plt.figure()
-    ax2 = fig1.add_subplot(111, projection='3d')
-
-    # Plot Adjustment
-    ax2.set_xlim(-1,1)
-    ax2.set_ylim(-1,1)
-    ax2.set_zlim(-1,1)
-    ax2.set_aspect('equal')
-
-    proxyPointsRL = []
-    for i in range(len(componentList)):
-        xRL,yRL,zRL = getCube(allDimsRL[i],allLocsRL[i])
-        plot1 = ax2.plot_surface(xRL,yRL,zRL, color=objColor[i], label=allTypesRL[i])
-        point = ax2.scatter(allLocsRL[i][0],allLocsRL[i][1],allLocsRL[i][2],color=objColor[i])
-        proxyPointsRL.append(point)
-
-
-    for j in range(len(structPanelList)):
-        xPanel,yPanel,zPanel = getCube(panelDims[j],panelLocs[j])
-        plot1 = ax2.plot_surface(xPanel,yPanel,zPanel, alpha=0.1, color='tab:gray')
-
-    plt.title("Visualization of Configuration RL")
-    plt.legend(proxyPointsRL,allTypesRL)
-
-
-
+    # Adjust the layout to accommodate the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])  # Reduce the plot area to leave space for the legend
     plt.show()
+
+
+    # GA Block
+    HVgridGA.filterParetoFront(0,0.01)
+    
+    pfSolutionsGA = HVgridGA.paretoFrontSolution
+    pfPointsGA = HVgridGA.paretoFrontPoint
+    print("\nGenetic Algorithm Filtered Pareto Front")
+    for idx,solution in enumerate(pfSolutionsGA):
+        print("\nDesign:", solution, "\nCosts:", pfPointsGA[idx])
+    for solutionGAIdx,solutionGA in enumerate(pfSolutionsGA):
+        allDimsGA = []
+        allLocsGA = []
+        allTypesGA = []
+
+        surfNormal = np.array([0, 0, 1])
+        for i in range(len(componentList)):
+            allTypesGA.append(componentList[i].type)
+
+            transMat = getOrientation(int(solutionGA[4 * i + 3]))
+
+            panelChoice = structPanelList[int(solutionGA[4 * i] % len(structPanelList))]
+            if solutionGA[4 * i] >= len(structPanelList):
+                surfNormal = surfNormal * -1
+
+            surfLoc = np.matmul(panelChoice.orientation, np.multiply([solutionGA[4 * i + 1], solutionGA[4 * i + 2], surfNormal[2]], np.array(panelChoice.dimensions) / 2))
+            allLocsGA.append(surfLoc + np.multiply(np.abs(np.matmul(transMat, np.array(componentList[i].dimensions) / 2)), np.matmul(panelChoice.orientation, surfNormal)) + panelChoice.location)
+
+            allDimsGA.append(np.matmul(transMat, componentList[i].dimensions))
+
+        panelDims = []
+        panelLocs = []
+        for panel in structPanelList:
+            panelLocs.append(panel.location)
+            panelDims.append(np.matmul(panel.orientation, panel.dimensions))
+
+        # Create Figure for GA
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot Adjustment for GA
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-1, 1)
+        ax.set_zlim(-1, 1)
+        ax.set_aspect('equal')
+
+        objColor = tuple(np.random.rand(len(componentList), 3))
+
+        proxyPointsGA = []
+        for i in range(len(componentList)):
+            xGA, yGA, zGA = getCube(allDimsGA[i], allLocsGA[i])
+            ax.plot_surface(xGA, yGA, zGA, color=objColor[i], label=allTypesGA[i])
+            point = ax.scatter(allLocsGA[i][0], allLocsGA[i][1], allLocsGA[i][2], color=objColor[i])
+            proxyPointsGA.append(point)
+
+        for j in range(len(structPanelList)):
+            xPanel, yPanel, zPanel = getCube(panelDims[j], panelLocs[j])
+            ax.plot_surface(xPanel, yPanel, zPanel, alpha=0.1, color='tab:gray')
+
+        plt.title("Visualization of Configuration GA")
+        plt.legend(proxyPointsGA, allTypesGA)
+        if solutionGAIdx == 10:
+            break
+    plt.show()
+
+    # RL Block
+    HVgridRL.filterParetoFront(0,0.01)
+    pfSolutionsRL = HVgridRL.paretoFrontSolution
+    pfPointsRL = HVgridRL.paretoFrontPoint
+    print("\nDeep Reinforcement Learning Filtered Pareto Front")
+    for idx,solution in enumerate(pfSolutionsRL):
+        print("\nDesign:", solution, "\nCosts:", pfPointsRL[idx])
+    for solutionRLIdx,solutionRL in enumerate(pfSolutionsRL):
+        allDimsRL = []
+        allLocsRL = []
+        allTypesRL = []
+
+        surfNormal = np.array([0, 0, 1])
+        for i in range(len(componentList)):
+            allTypesRL.append(componentList[i].type)
+
+            transMat = getOrientation(int(solutionRL[4 * i + 3]))
+
+            panelChoice = structPanelList[int(solutionRL[4 * i] % len(structPanelList))]
+            if solutionRL[4 * i] >= len(structPanelList):
+                surfNormal = surfNormal * -1
+
+            surfLoc = np.matmul(panelChoice.orientation, np.multiply([solutionRL[4 * i + 1], solutionRL[4 * i + 2], surfNormal[2]], np.array(panelChoice.dimensions) / 2))
+            allLocsRL.append(surfLoc + np.multiply(np.abs(np.matmul(transMat, np.array(componentList[i].dimensions) / 2)), np.matmul(panelChoice.orientation, surfNormal)) + panelChoice.location)
+
+            allDimsRL.append(np.matmul(transMat, componentList[i].dimensions))
+
+        panelDims = []
+        panelLocs = []
+        for panel in structPanelList:
+            panelLocs.append(panel.location)
+            panelDims.append(np.matmul(panel.orientation, panel.dimensions))
+
+        # Create Figure for RL
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot Adjustment for RL
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-1, 1)
+        ax.set_zlim(-1, 1)
+        ax.set_aspect('equal')
+
+        objColor = tuple(np.random.rand(len(componentList), 3))
+
+        proxyPointsRL = []
+        for i in range(len(componentList)):
+            xRL, yRL, zRL = getCube(allDimsRL[i], allLocsRL[i])
+            ax.plot_surface(xRL, yRL, zRL, color=objColor[i], label=allTypesRL[i])
+            point = ax.scatter(allLocsRL[i][0], allLocsRL[i][1], allLocsRL[i][2], color=objColor[i])
+            proxyPointsRL.append(point)
+
+        for j in range(len(structPanelList)):
+            xPanel, yPanel, zPanel = getCube(panelDims[j], panelLocs[j])
+            ax.plot_surface(xPanel, yPanel, zPanel, alpha=0.1, color='tab:gray')
+
+        plt.title("Visualization of Configuration RL")
+        plt.legend(proxyPointsRL, allTypesRL)
+        if solutionGAIdx == 10:
+            break
+    plt.show()
+
 
 if __name__ == "__main__":
     main()

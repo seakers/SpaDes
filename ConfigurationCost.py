@@ -1,5 +1,7 @@
 import numpy as np
 import itertools
+from ConfigUtils import getOrientation
+import torch
 
 def centerMassCost(locations,masses):
     # Function to calculate the center of mass
@@ -70,6 +72,115 @@ def overlapCost(dimensions,locations):
             overlap += xOverlap*yOverlap*zOverlap
 
     return overlap
+
+def overlapCostSingleNP(components, design, structPanels):
+    # Function to find if a new element overlaps with any existing elements
+    # used for immediate reward in RL
+
+    surfNormal = np.array([0,0,1])
+
+    # pull parameters from the components
+    numComps = int(len(design)/4)
+    locations = []
+    dimensions = []
+
+    for panel in structPanels:
+        locations.append(panel.location)
+        dimensions.append(panel.dimensions)
+
+    for i in range(numComps):
+
+        transMat = getOrientation(int(design[4*i+3]))
+    
+        panelChoice = structPanels[int(design[4*i]%len(structPanels))]
+        if design[4*i] >= len(structPanels):
+            surfNormal = surfNormal * -1
+        
+        surfLoc = np.matmul(panelChoice.orientation,np.multiply([design[4*i+1],design[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+        locations.append(surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(components[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location)
+        dimensions.append(components[i].dimensions)
+
+    overlap = 0
+
+    # Find the min(x,y,z) and max(x,y,z) for each element
+    elementCorners = []
+    for i in range(len(dimensions)):
+        minCorner = [locations[i][0]-dimensions[i][0]/2,
+                    locations[i][1]-dimensions[i][1]/2,
+                    locations[i][2]-dimensions[i][2]/2]
+        maxCorner = [locations[i][0]+dimensions[i][0]/2,
+                    locations[i][1]+dimensions[i][1]/2,
+                    locations[i][2]+dimensions[i][2]/2]
+        elCorners = [minCorner,maxCorner]
+        elementCorners.append(elCorners)
+    
+    # Find the overlap between the last element and all other elements
+    corners2 = elementCorners[-1]
+    for corners1 in elementCorners[:-1]:
+        xOverlap = min([corners1[1][0],corners2[1][0]]) - max([corners1[0][0],corners2[0][0]])
+        yOverlap = min([corners1[1][1],corners2[1][1]]) - max([corners1[0][1],corners2[0][1]])
+        zOverlap = min([corners1[1][2],corners2[1][2]]) - max([corners1[0][2],corners2[0][2]])
+        if xOverlap >= 0 and yOverlap >= 0 and zOverlap >= 0:
+            overlap += xOverlap*yOverlap*zOverlap
+
+    return overlap
+
+def overlapCostSingle(components, design, structPanels):
+    surfNormal = torch.tensor([0, 0, 1], device='cuda', dtype=torch.float32)  # Ensure surfNormal is float32
+    overlapAll = torch.zeros(len(design), device='cuda', dtype=torch.float32)
+
+    numComps = int(len(design[0]) / 4)
+
+    # Precompute structural panel locations, dimensions, and orientations as float32 tensors
+    panel_locations = torch.stack([torch.tensor(panel.location, device='cuda', dtype=torch.float32) for panel in structPanels])
+    panel_dimensions = torch.stack([torch.tensor(panel.dimensions, device='cuda', dtype=torch.float32) for panel in structPanels])
+    panel_orientations = torch.stack([torch.tensor(panel.orientation, device='cuda', dtype=torch.float32) for panel in structPanels])
+
+    for batchIdx, batchDes in enumerate(design):
+        batchLocations = []
+        batchDimensions = []
+        for i in range(numComps):
+            transMat = torch.tensor(getOrientation(int(batchDes[4 * i + 3])), device='cuda', dtype=torch.float32)
+
+            # Precompute structural panel choice and normal adjustment
+            panelIdx = int(batchDes[4 * i] % len(structPanels))
+            orientation = panel_orientations[panelIdx]
+            dimensions = panel_dimensions[panelIdx]
+
+            surfNormal_adjusted = surfNormal if batchDes[4 * i] < len(structPanels) else surfNormal * -1
+            
+            surfLoc = torch.matmul(orientation, 
+                                   (torch.tensor([batchDes[4 * i + 1], batchDes[4 * i + 2], surfNormal_adjusted[2]], device='cuda', dtype=torch.float32) * (dimensions / 2)))
+
+            component_dim = torch.tensor(components[i].dimensions, device='cuda', dtype=torch.float32)
+            transMat_component = torch.matmul(transMat, component_dim / 2)
+            finalLoc = surfLoc + torch.abs(torch.matmul(transMat_component, surfNormal_adjusted)) + panel_locations[panelIdx]
+
+            batchLocations.append(finalLoc)
+            batchDimensions.append(component_dim)
+
+        batchLocations = torch.stack(batchLocations)
+        batchDimensions = torch.stack(batchDimensions)
+
+        minCorners = batchLocations - batchDimensions / 2
+        maxCorners = batchLocations + batchDimensions / 2
+
+        # Vectorized overlap calculation
+        corners2_min = minCorners[-1]
+        corners2_max = maxCorners[-1]
+        corners1_min = minCorners[:-1]
+        corners1_max = maxCorners[:-1]
+
+        xOverlap = torch.minimum(corners1_max[:, 0], corners2_max[0]) - torch.maximum(corners1_min[:, 0], corners2_min[0])
+        yOverlap = torch.minimum(corners1_max[:, 1], corners2_max[1]) - torch.maximum(corners1_min[:, 1], corners2_min[1])
+        zOverlap = torch.minimum(corners1_max[:, 2], corners2_max[2]) - torch.maximum(corners1_min[:, 2], corners2_min[2])
+
+        overlap = torch.sum(torch.logical_and(torch.logical_and(xOverlap >= 0, yOverlap >= 0), zOverlap >= 0) * xOverlap * yOverlap * zOverlap)
+
+        overlapAll[batchIdx] = overlap
+
+    return overlapAll
+
 
 def wireCost(dimensions,locations,types,orientations):
     # Extra cost from wires from here https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Customer+Drawing%7F10614%7FK%7Fpdf%7FEnglish%7FENG_CD_10614_K.pdf%7F865042-004

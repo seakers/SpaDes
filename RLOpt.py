@@ -184,7 +184,7 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 10
+        epochs = 100
         num_components = len(components)
         num_panels = len(structPanels)
         actor, critic = get_models(num_components, num_panels)
@@ -255,6 +255,11 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
                 observation[idx].append(panel_norm[action])
             actions[idx].append(action)
             logprobs[idx].append(log_probs[idx])
+            # if x % 4 == 3:
+            #     newOverlapCost = overlapCostSingle(components,designs[idx],structPanels)
+            #     rewards[idx].append([newOverlapCost/maxCosts[0],0,0,0,0,0])
+            # else:
+            #     rewards[idx].append([0,0,0,0,0,0])
             rewards[idx].append([0,0,0,0,0,0])
 
 

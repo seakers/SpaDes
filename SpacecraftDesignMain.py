@@ -87,8 +87,8 @@ def payloadMissionFFE(payloadData):
     # Orbit
     rad = 6371 # km
     # semiMajorAxes = [200+rad,400+rad,600+rad] # km
-    # semiMajorAxes = [200+rad] # km
-    semiMajorAxes = [x+rad for x in np.linspace(100,1000,2)] # km
+    semiMajorAxes = [200+rad] # km
+    # semiMajorAxes = [x+rad for x in np.linspace(100,1000,2)] # km
     inclinations = [60]
     eccentricites = [0]
     longAscendingNodes = [0] # deg

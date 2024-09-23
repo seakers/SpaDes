@@ -22,7 +22,7 @@
         }
     ],
     "mission": {
-        "semiMajorAxis": 6471.0,
+        "semiMajorAxis": 6571,
         "inclination": 60,
         "eccentricity": 0,
         "longAscendingNode": 0,
