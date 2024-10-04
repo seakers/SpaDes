@@ -90,30 +90,7 @@ def massBudget(payloads,mission,spacecraft,compInstance,ADCSData,GSData,LVData):
     """
     Calculates a ground up esimate of the mass budget by summing all the subsystem masses
     """
-    # oldDryMass = spacecraft.dryMass
-    # payloadMass = payload.mass
-    # propellantMass = spacecraft.propellantMassInj
-    # MOI = spacecraft.MOI
-    # dims = spacecraft.dimensions
-    # a = mission.a
-    # i = mission.i
-    # offNadir = 2*np.pi/180 # chosen from other examples, examine more closely
-    # Cd = spacecraft.Cd
-    # sunAngle = 0.0 # Chosen from other example, examine more closely
-    # resDipole = spacecraft.resDipole
-    # ADCSAcc = payload.resolution*.15 # Chosen from historical missions (which are wildly inconsistant)
-    # ADCSKnow = payload.resolution*.003 # Chosen from historical missions (which are wildly inconsistant)
-    # PavgPayload = payload.avgPower
-    # PpeakPayload = payload.peakPower
-    # fracSunlight = mission.fractionSunlight
-    # worstSunAngle = 0.0 # Chosen from other example, examine more closely
-    # period = mission.period
-    # lifetime = mission.lifetime # Chosen from other example, examine more closely
-    # DOD = mission.depthOfDischarge
-    # mu = mission.mu
-    # rad = mission.rad
-    # h = rToh(a,rad)
-    # dataRate = payload.dataRate
+
 
     propMass, propComps = designPropulsion(spacecraft,compInstance)
     structMass = designStructure(spacecraft)

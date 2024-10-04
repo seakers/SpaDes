@@ -30,16 +30,23 @@ def GAFitnessFunc(GAInstance,solution,solutionIDX):
     costList = getCostComps(comps,structPanels,maxCosts)
     rewardList = -np.array(costList)
 
+    HVCosts = costList[1:]
+
     global NFE
     global allCosts
     global HVgrid
     global allHV
     NFE+=1
     allCosts.append(rewardList)
-    HVgrid.updateHV(costList,solution)
+    if costList[0] < 0.01:
+        HVgrid.updateHV(HVCosts,solution)
     allHV.append(HVgrid.getHV())
 
-    return rewardList
+    returnRewards = deepcopy(rewardList)
+    if returnRewards[0] < -0.01: # constraint handling to prevent overlap
+        returnRewards[0] = -100
+
+    return returnRewards
 
 def on_generation(ga_instance):
     global last_fitness
@@ -86,7 +93,7 @@ def GAOptimization(components,structPanels):
     allHV = []
     allCosts = []
     avgCosts = []
-    HVgrid = HypervolumeGrid([1,1,1,1,1,1])
+    HVgrid = HypervolumeGrid([1,1,1,1,1]) # Only 5 to eliminate constraint (overlap cost) from HV calculation
     allHV = []
 
     ga_instance = pygad.GA(num_generations=num_generations,

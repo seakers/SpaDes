@@ -1,84 +1,101 @@
-from HypervolumeUtils import HypervolumeGrid, ParetoFront, getParetoFront
-from pymoo.indicators.hv import HV
-import numpy as np
+from SCDesignClasses import Component
+from ConfigUtils import getOrientation
 import matplotlib.pyplot as plt
-import time
+import numpy as np
 
-costs = np.random.rand(200, 6)
 
-t0 = time.time()
-print("PyMoo With Pareto")
-hvPymoo = HV(ref_point=[1, 1, 1, 1, 1, 1])
+def getCube(dimensions,location):
+    # Function to transform cube dimensions and location into a form that plot_surface can plot
+    phi = np.arange(1,10,2)*np.pi/4
+    Phi, Theta = np.meshgrid(phi, phi)
 
-hvListPymoo = []
+    x = np.cos(Phi)*np.sin(Theta) * dimensions[0] + location[0]
+    y = np.sin(Phi)*np.sin(Theta) * dimensions[1] + location[1]
+    z = np.cos(Theta)/np.sqrt(2) * dimensions[2] + location[2]
+    return x,y,z
 
-pf = ParetoFront()
-for cost in costs:
-    pf.updatePF(cost)
+exComp = Component(type="battery", mass=8, dimensions=[0.1,0.2,0.3], heatDisp=2)
 
-    hvListPymoo.append(hvPymoo(pf.paretoFront))
+# electrical ports are located on the -x side and pointing is located on the +x side, as the dimensions are defined
 
-t1 = time.time()
-print("Alex Without Pareto")
-hvAlex = HypervolumeGrid([1, 1, 1, 1, 1, 1])
+structPanelList = [
+    # Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,0,.5], orientation=getOrientation(0)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,0,-.5], orientation=getOrientation(1)),
+    # Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,.5,0], orientation=getOrientation(22)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[0,-.5,0], orientation=getOrientation(23)),
+    # Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[.5,0,0], orientation=getOrientation(16)),
+    Component(type="structural panel", mass=1, dimensions=[1,1,.01], location=[-.5,0,0], orientation=getOrientation(18)),
+]
 
-hvListAlex = []
+exSol = [4,.6,.6,15]
 
-for cost in costs:
-    hvAlex.updateHV(cost)
-    hvListAlex.append(hvAlex.getHV())
+surfNormal = np.array([0, 0, 1])
 
-t2 = time.time()
-print("PyMoo Without Pareto")
-hvPymoo2 = HV(ref_point=[1, 1, 1, 1, 1, 1])
+type = exComp.type
 
-hvListPymoo2 = []
+transMat = getOrientation(int(exSol[3]))
 
-for i in range(len(costs)):
+panelChoice = structPanelList[int(exSol[0] % len(structPanelList))]
+if exSol[0] >= len(structPanelList):
+    surfNormal = surfNormal * -1
 
-    hvListPymoo2.append(hvPymoo2(costs[:i+1]))
+surfLoc = np.matmul(panelChoice.orientation, np.multiply([exSol[1], exSol[2], surfNormal[2]], np.array(panelChoice.dimensions) / 2))
+locs = surfLoc + np.multiply(np.abs(np.matmul(transMat, np.array(exComp.dimensions) / 2)), np.matmul(panelChoice.orientation, surfNormal)) + panelChoice.location
 
-t3 = time.time()
-print("Alex With Pareto")
-hvAlex2 = HypervolumeGrid([1, 1, 1, 1, 1, 1])
+dims = np.matmul(transMat, exComp.dimensions)
 
-hvListAlex2 = []
+panelDims = []
+panelLocs = []
+for panel in structPanelList:
+    panelLocs.append(panel.location)
+    panelDims.append(np.matmul(panel.orientation, panel.dimensions))
 
-pf2 = ParetoFront()
-for cost in costs:
-    pf2.updatePF(cost)
-    if (pf2.paretoFront[-1] == cost).all():
-        hvAlex2.updateHV(cost)
-    hvListAlex2.append(hvAlex2.getHV())
+# Create Figure for GA
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
 
-t4 = time.time()
+# Plot Adjustment for GA
+ax.set_xlim(-1, 1)
+ax.set_ylim(-1, 1)
+ax.set_zlim(-1, 1)
+ax.set_aspect('equal')
 
-print('PyMoo time Pareto: ', t1-t0)
-print('Alex time No Pareto: ', t2-t1)
-print('PyMoo time No Pareto: ', t3-t2)
-print('Alex time Pareto: ', t4-t3)
+proxyPointsGA = []
 
-# Plot the hypervolumes for all functions
-plt.figure(figsize=(12, 12))
+xGA, yGA, zGA = getCube(dims, locs)
+ax.plot_surface(xGA, yGA, zGA, color='red', label=type)
+point = ax.scatter(locs[0], locs[1], locs[2], color='red')
+proxyPointsGA.append(point)
 
-# Plot the hypervolumes for the functions with Pareto
-plt.subplot(2, 1, 1)
-plt.plot(hvListPymoo, color='blue', label='Hypervolume - PyMoo with Pareto')
-plt.plot(hvListAlex2, color='orange', label='Hypervolume - Alex with Pareto')
-plt.xlabel('Iteration')
-plt.ylabel('Hypervolume')
-plt.title('Hypervolume Convergence with Pareto')
-plt.legend()
+for j in range(len(structPanelList)):
+    xPanel, yPanel, zPanel = getCube(panelDims[j], panelLocs[j])
+    ax.plot_surface(xPanel, yPanel, zPanel, alpha=0.1, color='tab:gray')
 
-# Plot the hypervolumes for the functions without Pareto
-plt.subplot(2, 1, 2)
-plt.plot(hvListAlex, color='red', label='Hypervolume - Alex without Pareto')
-plt.plot(hvListPymoo2, color='green', label='Hypervolume - PyMoo without Pareto')
-plt.xlabel('Iteration')
-plt.ylabel('Hypervolume')
-plt.title('Hypervolume Convergence without Pareto')
-plt.legend()
+# Plot quivers for component coordinates
+quiver_x = ax.quiver(locs[0], locs[1], locs[2], 0, -0.4, 0, color='black')
+quiver_y = ax.quiver(locs[0], locs[1], locs[2], 0.4, 0, 0, color='black')
+quiver_z = ax.quiver(locs[0], locs[1], locs[2], 0, 0, 0.4, color='black')
 
-plt.tight_layout()
+# Add labels for the component quivers
+ax.text(locs[0], locs[1] - 0.5, locs[2], 'x', color='black')
+ax.text(locs[0] + 0.5, locs[1], locs[2], 'y', color='black')
+ax.text(locs[0], locs[1], locs[2] + 0.4, 'z', color='black')
+
+# Plot quivers for body coordinates
+quiver_x_body = ax.quiver(0, 0, 0, 0.5, 0, 0, color='blue')
+quiver_y_body = ax.quiver(0, 0, 0, 0, 0.5, 0, color='blue')
+quiver_z_body = ax.quiver(0, 0, 0, 0, 0, 0.5, color='blue')
+
+# Add labels for the body quivers
+ax.text(0.6, 0, 0, 'x', color='blue')
+ax.text(0, 0.5, 0, 'y', color='blue')
+ax.text(0, 0, 0.5, 'z', color='blue')
+
+# Add legend
+black_arrow = plt.Line2D([0], [0], linestyle="none", marker=">", markersize=10, markerfacecolor="black", markeredgecolor="black")
+blue_arrow = plt.Line2D([0], [0], linestyle="none", marker=">", markersize=10, markerfacecolor="blue", markeredgecolor="blue")
+ax.legend([black_arrow, blue_arrow], ['Component Coordinates', 'Body Coordinates'], numpoints=1)
+
+plt.title("Visualization of Coordinates")
+
 plt.show()
-

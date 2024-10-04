@@ -85,10 +85,10 @@ def main():
     maxCostList = maxCostComps(componentList,structPanelList)
 
     # Optimize
-    numRuns = 20
+    numRuns = 1
 
     # Genetic Algorithm
-    # t00 = time.time()
+    t00 = time.time()
     allHVGA = []
     allAvgCostsGA = []
     for runGA in range(numRuns):
@@ -96,8 +96,7 @@ def main():
         numStepsGA, allHVGARun, HVgridGA, avgCostsGA = optimization(componentList,structPanelList,maxCostList,"GA")
         allHVGA.append(allHVGARun)
         allAvgCostsGA.append(avgCostsGA)
-    # t01 = time.time()
-    # print("Time for RL2: ", (t01-t00)/numRuns)
+    t01 = time.time()
 
     # Reset locations and dimensions for Reinforcement Learning
     i = 0
@@ -105,7 +104,7 @@ def main():
         comp.location = compLocs[i]
         comp.dimensions = compDims[i]
         i+=1
-    # t10 = time.time()
+    t10 = time.time()
     allHVRL = []
     allAvgCostsRL = []
     for runRL in range(numRuns):
@@ -113,8 +112,10 @@ def main():
         numStepsRL, allHVRLRun, HVgridRL, avgCostsRL = optimization(componentList,structPanelList,maxCostList,"RL")
         allHVRL.append(allHVRLRun)
         allAvgCostsRL.append(avgCostsRL)
-    # t11 = time.time()
-    # print("Time for RLE: ", (t11-t10)/numRuns)
+    t11 = time.time()
+
+    print("GA Average Time: ", (t01-t00)/numRuns)
+    print("RL Average Time: ", (t11-t10)/numRuns)
 
     allHVGA = np.array(allHVGA)
     allHVRL = np.array(allHVRL)
@@ -159,13 +160,13 @@ def main():
     plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
     plt.show()
 
-
-    fig, axs = plt.subplots(2, 3, figsize=(18, 10))  # Increase the figure width to make space for the legend
+    
+    fig, axs = plt.subplots(3, 2, figsize=(12, 10))  # Increase the figure width to make space for the legend
     cost_labels = ["Overlap", "Moment of Inertia", "Product of Inertia", "Center of Mass", "Wire Length", "Thermal Variance"]
 
     for i in range(6):
-        row = i // 3
-        col = i % 3
+        row = i // 2
+        col = i % 2
         axs[row, col].plot(medianAvgCostsGA[:, i], color='tab:blue')
         axs[row, col].plot(medianAvgCostsRL[:, i], color='tab:orange')
         axs[row, col].plot(maxAvgCostsGA[:, i], color='tab:blue', linestyle='dashed')
@@ -183,15 +184,15 @@ def main():
                 "Maximum Average Objective GA", "Minimum Average Objective GA",
                 "Maximum Average Objective RL", "Minimum Average Objective RL", 
                 "Interquartile Average Objective GA", "Interquartile Average Objective RL"], 
-            loc="center right")
+            loc="center right", bbox_to_anchor=(1.0, 0.5))
 
     # Adjust the layout to accommodate the legend
-    plt.tight_layout(rect=[0, 0, 0.85, 1])  # Reduce the plot area to leave space for the legend
+    plt.tight_layout(rect=[0, 0, 0.75, 1])  # Reduce the plot area to leave space for the legend
     plt.show()
-
+        
 
     # GA Block
-    HVgridGA.filterParetoFront(0,0.01)
+    # HVgridGA.filterParetoFront(0,0.01)
     
     pfSolutionsGA = HVgridGA.paretoFrontSolution
     pfPointsGA = HVgridGA.paretoFrontPoint
@@ -248,13 +249,13 @@ def main():
             ax.plot_surface(xPanel, yPanel, zPanel, alpha=0.1, color='tab:gray')
 
         plt.title("Visualization of Configuration GA")
-        plt.legend(proxyPointsGA, allTypesGA)
+        plt.legend(proxyPointsGA, allTypesGA, loc='center left', bbox_to_anchor=(1, 0.5))
         if solutionGAIdx == 10:
             break
     plt.show()
 
     # RL Block
-    HVgridRL.filterParetoFront(0,0.01)
+    # HVgridRL.filterParetoFront(0,0.01)
     pfSolutionsRL = HVgridRL.paretoFrontSolution
     pfPointsRL = HVgridRL.paretoFrontPoint
     print("\nDeep Reinforcement Learning Filtered Pareto Front")
@@ -310,7 +311,7 @@ def main():
             ax.plot_surface(xPanel, yPanel, zPanel, alpha=0.1, color='tab:gray')
 
         plt.title("Visualization of Configuration RL")
-        plt.legend(proxyPointsRL, allTypesRL)
+        plt.legend(proxyPointsRL, allTypesRL, loc='center left', bbox_to_anchor=(1, 0.5))
         if solutionGAIdx == 10:
             break
     plt.show()

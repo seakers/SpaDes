@@ -163,7 +163,7 @@ class Critic(nn.Module):
     def __init__(self, num_components):
         super(Critic, self).__init__()
         self.state_dim = 4 * num_components
-        self.num_objectives = 6
+        self.num_objectives = 5 # 5 now after making overlap a constraint
         self.dense_dim = 128
         # self.dense_dim = 32
 
@@ -250,7 +250,7 @@ class RLWrapper():
         allCLoss = []
         allLoss = []
         allKL = []
-        HVgrid = HypervolumeGrid([1,1,1,1,1,1])
+        HVgrid = HypervolumeGrid([1,1,1,1,1]) # Only 5 to eliminate constraint (overlap cost) from HV calculation
 
         for x in range(epochs):
             print("Epoch: ", x)
@@ -332,8 +332,9 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
     orientation_norm = np.linspace(0, 1, 24)
 
     # Create a set of six random weights
-    weightsNonNorm = np.random.rand(mini_batch_size,6)
+    weightsNonNorm = np.random.rand(mini_batch_size,5)
     weights = weightsNonNorm / weightsNonNorm.sum(axis=1, keepdims=True)
+    # weights = np.hstack((np.full((mini_batch_size, 1), 10), weightsNonConstraint))
 
     # 1. Sample actor
     for x in range(num_actions):
@@ -364,7 +365,10 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             
             if act == 3:
                 newOverlapCost = overlapCostSingleNP(components,designs[idx],structPanels)
-                rewards[idx].append(-newOverlapCost/maxCosts[0])
+                if newOverlapCost > 0.005:
+                    rewards[idx].append(-100)
+                else:
+                    rewards[idx].append(0)
             else:
                 rewards[idx].append(0)
 
@@ -393,9 +397,15 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
         costVals = getCostComps(components,structPanels,maxCosts)
         NFE += 1
         adjCostVals = -np.array(costVals)
-        HVgrid.updateHV(costVals, des)
+        rewardCostVals = adjCostVals[1:]
+
+        HVCosts = costVals[1:]
+
+        if costVals[0] < 0.01:
+            HVgrid.updateHV(HVCosts, des)
         allHV.append(HVgrid.getHV())
-        rewards[idx][-1] = np.dot(weights[idx],adjCostVals)
+
+        rewards[idx][-1] = rewards[idx][-1] + np.dot(weights[idx],rewardCostVals)
         cost.append(adjCostVals)
 
         # adjustCostVals = []
