@@ -38,25 +38,109 @@ def main():
     # Spacecraft Component Adaptive Layout Environment (SCALE): An efficient optimization tool
     # by Fakoor
 
+    # componentList = [
+    #     Component(type="battery", mass=8, dimensions=[.25,.2,.15], heatDisp=2),
+    #     Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    #     Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    #     Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
+    #     Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
+    #     Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
+    #     Component(type="transmitter", mass=4.5, dimensions=[.25,.15,.05], heatDisp=12),
+    #     Component(type="transmitter", mass=3.5, dimensions=[.2,.1,.05], heatDisp=10),
+    #     Component(type="reciever", mass=4, dimensions=[.2,.15,.03], heatDisp=11),
+    #     Component(type="reciever", mass=3, dimensions=[.175,.125,.03], heatDisp=9),
+    #     Component(type="PCU", mass=7, dimensions=[.3,.2,.15], heatDisp=7),
+    #     Component(type="OBDH", mass=9, dimensions=[.24,.18,.18], heatDisp=6),
+    #     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    #     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    #     Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
+    #     Component(type="payload", mass=5, dimensions=[.3,.25,.2], heatDisp=3),
+    #     Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5),
+    #     Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5)
+    # ]
+
+    # componentList = [
+    #     Component(type="fuel tank", mass=15, dimensions=[.3,.25,.2], heatDisp=3),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
+    #     Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
+    #     Component(type="antenna", mass=3.5, dimensions=[.3,.12,.1], heatDisp=8),
+    #     Component(type="antenna", mass=3, dimensions=[.25,.1,.08], heatDisp=7),
+    #     Component(type="data recorder", mass=2.5, dimensions=[.22,.18,.06], heatDisp=6),
+    #     Component(type="PCU", mass=6.5, dimensions=[.25,.2,.12], heatDisp=6),
+    #     Component(type="OBDH", mass=8, dimensions=[.22,.18,.16], heatDisp=5),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="payload", mass=4.5, dimensions=[.28,.22,.18], heatDisp=2.8),
+    #     Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
+    #     Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
+    #     Component(type="battery", mass=6, dimensions=[.2,.18,.12], heatDisp=2)
+    # ]
+
+    # componentList = [
+    #     Component(type="OBDH", mass=3, dimensions=[.24,.19,.07], heatDisp=7),
+    #     Component(type="PCU", mass=7, dimensions=[.26,.21,.13], heatDisp=6.5),
+    #     Component(type="command processor", mass=7.5, dimensions=[.23,.19,.17], heatDisp=5.5),
+    #     Component(type="inertial measurement unit", mass=2.3, dimensions=[.14,.11,.09], heatDisp=2.5),
+    #     Component(type="inertial measurement unit", mass=2.3, dimensions=[.14,.11,.09], heatDisp=2.5),
+    #     Component(type="antenna", mass=4.2, dimensions=[.35,.14,.12], heatDisp=9),
+    #     Component(type="antenna", mass=3.2, dimensions=[.22,.09,.07], heatDisp=7.5),
+    #     Component(type="gamma-ray sensor", mass=1.3, dimensions=[.11,.09,.04], heatDisp=1.4),
+    #     Component(type="gamma-ray sensor", mass=1.3, dimensions=[.11,.09,.04], heatDisp=1.4),
+    #     Component(type="gamma-ray sensor", mass=1.3, dimensions=[.11,.09,.04], heatDisp=1.4),
+    #     Component(type="payload", mass=5, dimensions=[.3,.24,.2], heatDisp=3),
+    #     Component(type="solar panel", mass=1.3, dimensions=[.19,.49,.01], heatDisp=1.5),
+    #     Component(type="solar panel", mass=1.3, dimensions=[.19,.49,.01], heatDisp=1.5),
+    #     Component(type="battery", mass=5.5, dimensions=[.22,.2,.13], heatDisp=2.2),
+    #     Component(type="propellant tank", mass=12, dimensions=[.28,.22,.18], heatDisp=4),
+    #     Component(type="sun sensor", mass=1.5, dimensions=[.09,.14,.1], heatDisp=0.9),
+    #     Component(type="sun sensor", mass=1.5, dimensions=[.09,.14,.1], heatDisp=0.9),
+    #     Component(type="sun sensor", mass=1.5, dimensions=[.09,.14,.1], heatDisp=0.9)
+    # ]
+
+    # componentList = [
+    #     Component(type="PCU", mass=6, dimensions=[.25,.2,.12], heatDisp=6.2),
+    #     Component(type="OBDH", mass=8.5, dimensions=[.24,.19,.16], heatDisp=5.8),
+    #     Component(type="flight computer", mass=7.8, dimensions=[.23,.19,.18], heatDisp=5.6),
+    #     Component(type="reaction wheel", mass=2.8, dimensions=[.14,.12,.1], heatDisp=3),
+    #     Component(type="reaction wheel", mass=2.8, dimensions=[.14,.12,.1], heatDisp=3),
+    #     Component(type="antenna", mass=4.5, dimensions=[.34,.15,.12], heatDisp=9.5),
+    #     Component(type="antenna", mass=3.3, dimensions=[.23,.1,.08], heatDisp=7.8),
+    #     Component(type="star tracker", mass=1.6, dimensions=[.1,.12,.09], heatDisp=1.1),
+    #     Component(type="star tracker", mass=1.6, dimensions=[.1,.12,.09], heatDisp=1.1),
+    #     Component(type="star tracker", mass=1.6, dimensions=[.1,.12,.09], heatDisp=1.1),
+    #     Component(type="payload", mass=5.2, dimensions=[.29,.24,.21], heatDisp=3.2),
+    #     Component(type="solar panel", mass=1.4, dimensions=[.18,.47,.01], heatDisp=1.6),
+    #     Component(type="solar panel", mass=1.4, dimensions=[.18,.47,.01], heatDisp=1.6),
+    #     Component(type="battery", mass=5.8, dimensions=[.22,.21,.14], heatDisp=2.3),
+    #     Component(type="hydrazine tank", mass=13, dimensions=[.29,.23,.19], heatDisp=4.1),
+    #     Component(type="magnetometer", mass=1.4, dimensions=[.09,.13,.1], heatDisp=1),
+    #     Component(type="magnetometer", mass=1.4, dimensions=[.09,.13,.1], heatDisp=1),
+    #     Component(type="magnetometer", mass=1.4, dimensions=[.09,.13,.1], heatDisp=1)
+    # ]
+
     componentList = [
-        Component(type="battery", mass=8, dimensions=[.25,.2,.15], heatDisp=2),
-        Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
-        Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
-        Component(type="reaction wheel", mass=2, dimensions=[.075,.240,.240], heatDisp=2),
-        Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
-        Component(type="gyro", mass=3, dimensions=[.1876,.1239,.0015], heatDisp=2.5),
-        Component(type="transmitter", mass=4.5, dimensions=[.25,.15,.05], heatDisp=12),
-        Component(type="transmitter", mass=3.5, dimensions=[.2,.1,.05], heatDisp=10),
-        Component(type="reciever", mass=4, dimensions=[.2,.15,.03], heatDisp=11),
-        Component(type="reciever", mass=3, dimensions=[.175,.125,.03], heatDisp=9),
-        Component(type="PCU", mass=7, dimensions=[.3,.2,.15], heatDisp=7),
-        Component(type="OBDH", mass=9, dimensions=[.24,.18,.18], heatDisp=6),
-        Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
-        Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
-        Component(type="magnetometer", mass=1.5, dimensions=[.15,.12,.04], heatDisp=1.5),
-        Component(type="payload", mass=5, dimensions=[.3,.25,.2], heatDisp=3),
-        Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5),
-        Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5)
+        Component(type="reaction wheel", mass=3, dimensions=[.14,.13,.1], heatDisp=3.1),
+        Component(type="reaction wheel", mass=3, dimensions=[.14,.13,.1], heatDisp=3.1),
+        Component(type="star tracker", mass=1.7, dimensions=[.11,.13,.1], heatDisp=1.2),
+        Component(type="star tracker", mass=1.7, dimensions=[.11,.13,.1], heatDisp=1.2),
+        Component(type="star tracker", mass=1.7, dimensions=[.11,.13,.1], heatDisp=1.2),
+        Component(type="antenna", mass=4.3, dimensions=[.33,.15,.12], heatDisp=9.7),
+        Component(type="antenna", mass=3.4, dimensions=[.22,.09,.08], heatDisp=7.9),
+        Component(type="magnetometer", mass=1.5, dimensions=[.1,.12,.1], heatDisp=1.1),
+        Component(type="magnetometer", mass=1.5, dimensions=[.1,.12,.1], heatDisp=1.1),
+        Component(type="magnetometer", mass=1.5, dimensions=[.1,.12,.1], heatDisp=1.1),
+        Component(type="solar panel", mass=1.5, dimensions=[.19,.48,.01], heatDisp=1.7),
+        Component(type="solar panel", mass=1.5, dimensions=[.19,.48,.01], heatDisp=1.7),
+        Component(type="battery", mass=6, dimensions=[.23,.2,.14], heatDisp=2.5),
+        Component(type="propellant tank", mass=12.5, dimensions=[.28,.22,.18], heatDisp=4.2),
+        Component(type="PCU", mass=6.3, dimensions=[.26,.21,.13], heatDisp=6.4),
+        Component(type="OBDH", mass=8.2, dimensions=[.24,.18,.15], heatDisp=5.9),
+        Component(type="flight computer", mass=7.6, dimensions=[.22,.19,.17], heatDisp=5.7),
+        Component(type="payload", mass=5.5, dimensions=[.3,.23,.22], heatDisp=3.4)
     ]
 
     # electrical ports are located on the -x side and pointing is located on the +x side, as the dimensions are defined
@@ -85,7 +169,7 @@ def main():
     maxCostList = maxCostComps(componentList,structPanelList)
 
     # Optimize
-    numRuns = 1
+    numRuns = 20
 
     # Genetic Algorithm
     t00 = time.time()

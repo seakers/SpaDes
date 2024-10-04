@@ -239,10 +239,11 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 500
+        epochs = 75
         num_components = len(components)
         num_panels = len(structPanels)
-        actor, critic = get_models(num_components, num_panels)
+        # actor, critic = get_new_models(num_components, num_panels)
+        actor, critic = get_existing_models(num_components, num_panels)
 
         NFE = 0
         allHV = []
@@ -254,11 +255,16 @@ class RLWrapper():
 
         for x in range(epochs):
             print("Epoch: ", x)
-            NFE, HVgrid, allHV, avgCost, c_loss, loss, kl  = run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV)
+            actor, critic, NFE, HVgrid, allHV, avgCost, c_loss, loss, kl  = run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV)
             allCLoss.append(c_loss)
             allLoss.append(loss)
             allKL.append(kl)
             avgCosts.append(avgCost)
+
+        # Save models
+
+        # torch.save(actor.state_dict(), 'actor.pth')
+        # torch.save(critic.state_dict(), 'critic.pth')
 
         # import matplotlib.pyplot as plt
 
@@ -298,9 +304,22 @@ class RLWrapper():
         return epochs,allHV,HVgrid,avgCosts
 
 
-def get_models(num_components, num_panels):
+def get_new_models(num_components, num_panels):
     actor = Actor(num_components=num_components, num_panels=num_panels).to('cuda')
     critic = Critic(num_components=num_components).to('cuda')
+
+    inputs = torch.zeros(size=(1,num_components*4)).to('cuda')
+    actor(inputs)
+    critic(inputs)
+
+    return actor, critic
+
+def get_existing_models(num_components, num_panels):
+    actor = Actor(num_components=num_components, num_panels=num_panels).to('cuda')
+    critic = Critic(num_components=num_components).to('cuda')
+
+    actor.load_state_dict(torch.load('actor.pth'))
+    critic.load_state_dict(torch.load('critic.pth'))
 
     inputs = torch.zeros(size=(1,num_components*4)).to('cuda')
     actor(inputs)
@@ -365,7 +384,7 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             
             if act == 3:
                 newOverlapCost = overlapCostSingleNP(components,designs[idx],structPanels)
-                if newOverlapCost > 0.005:
+                if newOverlapCost > 0.001:
                     rewards[idx].append(-100)
                 else:
                     rewards[idx].append(0)
@@ -529,4 +548,4 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
     print('Critic Loss: ', c_loss, '\nActor Loss: ', loss, '\nAvg Cost: ', avgCost, "\n")
 
 
-    return NFE, HVgrid, allHV, avgCost, c_loss, loss, kl
+    return actor, critic, NFE, HVgrid, allHV, avgCost, c_loss, loss, kl

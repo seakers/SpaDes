@@ -61,7 +61,7 @@ def on_generation(ga_instance):
 def GAOptimization(components,structPanels):
     # uses a GA to find the optimal spacecraft configuration
     # Parameters
-    num_generations = 500 # Number of generations.
+    num_generations = 200 # Number of generations.
     num_parents_mating = 16 # Number of solutions to be selected as parents in the mating pool.
 
     sol_per_pop = 64 # Number of solutions in the population.

@@ -223,12 +223,12 @@ def thermalCost(dimensions,locations,heatDisps):
         # 1/4 SA is the average cross sectional area of any 3d shape. 4*pi*r^2 is the surface area of the sphere
         # of radius r from the dissipating component
         if SAA < distanceSphere:
-            Qin[pair[0]] += 1/4*SAA*heatDispsB/(distanceSphere)
+            Qin[pair[0]] += 1/4*SAA*heatDispsB/(distanceSphere) # look into changing to r^2
         else:
             Qin[pair[0]] += heatDispsB
 
         if SAB < distanceSphere:
-            Qin[pair[1]] += 1/4*SAB*heatDispsA/(distanceSphere)
+            Qin[pair[1]] += 1/4*SAB*heatDispsA/(distanceSphere) # look into changing to r^2
         else:
             Qin[pair[1]] += heatDispsA
 
@@ -246,7 +246,7 @@ def pointingObj(dimensions,locations,types,orientations):
     # setting pointing to be in the +x direction
     pointDir = np.array([1,0,0])
 
-    pointingComps = ["solar panel","payload","transmitter","receiver"]
+    pointingComps = ["solar panel","payload","transmitter","receiver","antenna","star tracker","sun sensor"]
 
     newPointLocs = []
     newPointDims = []
