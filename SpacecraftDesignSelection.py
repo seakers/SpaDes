@@ -85,6 +85,8 @@ def loadJSONSCDesign(jsonPath, ind):
 
     coverageRequestJSONFile = coverageRequestJSON(payloads, mission, ind)
 
+    scienceRequestJSONFile = scienceRequestJSON(payloads, mission, ind)
+
     return scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile
 
 
@@ -229,3 +231,6 @@ def coverageRequestJSON(payloads, mission, ind):
 
     # print(jsonOrbit)
     return coverageJSONFile
+
+def scienceRequestJSON(payloads, mission, ind):
+    

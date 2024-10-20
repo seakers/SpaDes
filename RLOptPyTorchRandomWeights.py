@@ -18,7 +18,7 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
         self.num_components = num_components
         self.state_dim = self.num_components * 4
-        self.position_actions = 51
+        self.position_actions = 201
         self.rotation_actions = 24
         self.panel_actions = 2 * num_panels
         self.dense_dim = 128
@@ -239,7 +239,7 @@ class RLWrapper():
 
     @staticmethod
     def run(components,structPanels,maxCosts):
-        epochs = 75
+        epochs = 500
         num_components = len(components)
         num_panels = len(structPanels)
         # actor, critic = get_new_models(num_components, num_panels)
@@ -263,8 +263,8 @@ class RLWrapper():
 
         # Save models
 
-        # torch.save(actor.state_dict(), 'actor.pth')
-        # torch.save(critic.state_dict(), 'critic.pth')
+        torch.save(actor.state_dict(), 'actorHRes.pth')
+        torch.save(critic.state_dict(), 'criticHRes.pth')
 
         # import matplotlib.pyplot as plt
 
@@ -318,8 +318,8 @@ def get_existing_models(num_components, num_panels):
     actor = Actor(num_components=num_components, num_panels=num_panels).to('cuda')
     critic = Critic(num_components=num_components).to('cuda')
 
-    actor.load_state_dict(torch.load('actor.pth'))
-    critic.load_state_dict(torch.load('critic.pth'))
+    actor.load_state_dict(torch.load('actorHRes.pth'))
+    critic.load_state_dict(torch.load('criticHRes.pth'))
 
     inputs = torch.zeros(size=(1,num_components*4)).to('cuda')
     actor(inputs)
@@ -347,7 +347,7 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
     act_list = [x % 4 for x in range(num_actions)]
 
     panel_norm = np.linspace(0, 1, 2 * len(structPanels))
-    coords = np.linspace(-1, 1, 51)
+    coords = np.linspace(-1, 1, 201)
     orientation_norm = np.linspace(0, 1, 24)
 
     # Create a set of six random weights
@@ -384,7 +384,7 @@ def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, al
             
             if act == 3:
                 newOverlapCost = overlapCostSingleNP(components,designs[idx],structPanels)
-                if newOverlapCost > 0.001:
+                if newOverlapCost > 0.005:
                     rewards[idx].append(-100)
                 else:
                     rewards[idx].append(0)

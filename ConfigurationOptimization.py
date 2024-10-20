@@ -76,7 +76,7 @@ def GAOptimization(components,structPanels):
         elif i%4 == 3:
             gene_space[i] = np.arange(24) # for orientation
         else:
-            gene_space[i] = np.linspace(-1, 1, 51)
+            gene_space[i] = np.linspace(-1, 1, 201)
 
     parent_selection_type = "nsga2"
 
