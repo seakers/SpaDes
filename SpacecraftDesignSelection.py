@@ -232,5 +232,5 @@ def coverageRequestJSON(payloads, mission, ind):
     # print(jsonOrbit)
     return coverageJSONFile
 
-def scienceRequestJSON(payloads, mission, ind):
+# def scienceRequestJSON(payloads, mission, ind):
     
