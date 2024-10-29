@@ -19,8 +19,8 @@ def loadJSONSCDesign(jsonPath, ind):
     jsonFile = open(jsonPath)
     jsonDict = json.load(jsonFile)
 
-    payloadDict = jsonDict['payloads']
-    missionDict = jsonDict['mission']
+    payloadDict = jsonDict['payload']
+    orbitDict = jsonDict['orbit']
 
     # import into component object
     payloads = []
@@ -32,24 +32,23 @@ def loadJSONSCDesign(jsonPath, ind):
             avgPower=payload['mass'],
             peakPower=payload['peakPower'],
             name=payload['name'],
-            tempRange=payload['tempRange'],
+            tempRange=payload['temperatureRange'],
             resolution=payload['resolution'],
-            FOV=payload['FOV'],
-            specRange=payload['specRange'],
+            FOV=payload['fieldOfView']['crossTrackFieldOfView'],
             dataRate=payload['dataRate'],
-            FOR=payload['FOR']
+            FOR=payload['fieldOfView']['fieldOfRegard']
             # swathWidth=payload['swathWidth']
             )
         payloads.append(payloadComp)
     
     # import into mission object
     mission = Mission(
-        semiMajorAxis=missionDict['semiMajorAxis'],
-        inclination=missionDict['inclination'],
-        eccentricity=missionDict['eccentricity'],
-        longAscendingNode=missionDict['longAscendingNode'],
-        argPeriapsis=missionDict['argPeriapsis'],
-        trueAnomaly=missionDict['trueAnomaly'],
+        semiMajorAxis=orbitDict['semimajorAxis'],
+        inclination=orbitDict['inclination'],
+        eccentricity=orbitDict['eccentricity'],
+        longAscendingNode=orbitDict['rightAscensionAscendingNode'],
+        argPeriapsis=orbitDict['periapsisArgument'],
+        trueAnomaly=orbitDict['trueAnomaly'],
         numPlanes=1,
         numSats=1
     )
@@ -85,7 +84,7 @@ def loadJSONSCDesign(jsonPath, ind):
 
     coverageRequestJSONFile = coverageRequestJSON(payloads, mission, ind)
 
-    scienceRequestJSONFile = scienceRequestJSON(payloads, mission, ind)
+    # scienceRequestJSONFile = scienceRequestJSON(jsonDict)
 
     return scMass, subsMass, components, costEstimationJSONFile, coverageRequestJSONFile
 
