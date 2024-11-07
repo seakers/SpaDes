@@ -7,6 +7,7 @@ import scipy.signal
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
 import time
+from torch.amp import autocast, GradScaler
 
 
 def discounted_cumulative_sums(x, discount):
@@ -21,21 +22,26 @@ class Actor(nn.Module):
         self.position_actions = 201
         self.rotation_actions = 24
         self.panel_actions = 2 * num_panels
-        self.dense_dim = 128
+        self.dense_dim = 512
+        self.scaler = GradScaler('cuda')
         # self.dense_dim = 32
         
         # MLP
         self.input_layer = nn.Linear(self.state_dim, self.dense_dim)
         self.input_act = nn.ReLU()
+        self.input_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_1 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_1_act = nn.ReLU()
+        self.hidden_1_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_2 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_2_act = nn.ReLU()
+        self.hidden_2_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_3 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_3_act = nn.ReLU()
+        self.hidden_3_norm = nn.LayerNorm(self.dense_dim)
 
         # Output layers for each action type
         self.position_output_layer = nn.Linear(self.dense_dim, self.position_actions)
@@ -46,31 +52,38 @@ class Actor(nn.Module):
         
         # Optimizer
         self.optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.9)
+
 
     def forward(self, inputs, act=0):
-        x = inputs
+        with autocast(device_type='cuda', dtype=torch.float16):
+            x = inputs
 
-        # Pass through MLP
-        x = self.input_layer(x)
-        x = self.input_act(x)
-        x = self.hidden_1(x)
-        x = self.hidden_1_act(x)
-        x = self.hidden_2(x)
-        x = self.hidden_2_act(x)
-        x = self.hidden_3(x)
-        x = self.hidden_3_act(x)
+            # Pass through MLP
+            x = self.input_layer(x)
+            x = self.input_act(x)
+            x = self.input_norm(x)
+            x = self.hidden_1(x)
+            x = self.hidden_1_act(x)
+            x = self.hidden_1_norm(x)
+            x = self.hidden_2(x)
+            x = self.hidden_2_act(x)
+            x = self.hidden_2_norm(x)
+            x = self.hidden_3(x)
+            x = self.hidden_3_act(x)
+            x = self.hidden_3_norm(x)
 
-        # Process output based on `act` flag
-        if act == 0:  # Panel prediction
-            x = self.panel_output_layer(x)
-        elif act == 1:  # X location prediction
-            x = self.position_output_layer(x)
-        elif act == 2:  # Y location prediction
-            x = self.position_output_layer(x)
-        elif act == 3:  # Rotation prediction
-            x = self.rotation_output_layer(x)
+            # Process output based on `act` flag
+            if act == 0:  # Panel prediction
+                x = self.panel_output_layer(x)
+            elif act == 1:  # X location prediction
+                x = self.position_output_layer(x)
+            elif act == 2:  # Y location prediction
+                x = self.position_output_layer(x)
+            elif act == 3:  # Rotation prediction
+                x = self.rotation_output_layer(x)
 
-        x = self.output_act(x)
+            x = self.output_act(x)
 
         return x
 
@@ -93,65 +106,74 @@ class Actor(nn.Module):
         return action_probs, action_ids, output
 
     def ppo_update(self, observation_tensor, action_tensor, logprob_tensor, advantage_tensor):
-        clip_ratio = 0.1
-        
-        # Separate observation tensor for panel, position, and rotation
-        panel_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 0]
-        x_position_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 1]
-        y_position_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 2]
-        rotation_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 3]
 
-        # Separate action tensor for panel, position, and rotation
-        panel_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 0].long()
-        x_position_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 1].long()
-        y_position_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 2].long()
-        rotation_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 3].long()
+        self.optimizer.zero_grad()
 
-        # Compute predicted log probabilities for panel, position, and rotation actions
-        panel_pred_probs = self(panel_observation_tensor, act=0)
-        panel_pred_log_probs = torch.log(panel_pred_probs + 1e-10)
-        panel_log_probs = torch.sum(
-            F.one_hot(panel_action_tensor, num_classes=self.panel_actions) * panel_pred_log_probs, dim=-1
-        )
+        with autocast(device_type='cuda', dtype=torch.float16):
+            clip_ratio = 0.1
+            
+            # Separate observation tensor for panel, position, and rotation
+            panel_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 0]
+            x_position_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 1]
+            y_position_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 2]
+            rotation_observation_tensor = observation_tensor[torch.arange(len(observation_tensor)) % 4 == 3]
 
-        # Compute predicted log probabilities for x position actions
-        x_position_pred_probs = self(x_position_observation_tensor, act=1)
-        x_position_pred_log_probs = torch.log(x_position_pred_probs + 1e-10)
-        x_position_log_probs = torch.sum(
-            F.one_hot(x_position_action_tensor, num_classes=self.position_actions) * x_position_pred_log_probs, dim=-1
-        )
+            # Separate action tensor for panel, position, and rotation
+            panel_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 0].long()
+            x_position_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 1].long()
+            y_position_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 2].long()
+            rotation_action_tensor = action_tensor[torch.arange(len(action_tensor)) % 4 == 3].long()
 
-        # Compute predicted log probabilities for y position actions
-        y_position_pred_probs = self(y_position_observation_tensor, act=2)
-        y_position_pred_log_probs = torch.log(y_position_pred_probs + 1e-10)
-        y_position_log_probs = torch.sum(
-            F.one_hot(y_position_action_tensor, num_classes=self.position_actions) * y_position_pred_log_probs, dim=-1
-        )
+            # Compute predicted log probabilities for panel, position, and rotation actions
+            panel_pred_probs = self(panel_observation_tensor, act=0)
+            panel_pred_log_probs = torch.log(panel_pred_probs + 1e-10)
+            panel_log_probs = torch.sum(
+                F.one_hot(panel_action_tensor, num_classes=self.panel_actions) * panel_pred_log_probs, dim=-1
+            )
 
-        rotation_pred_probs = self(rotation_observation_tensor, act=3)
-        rotation_pred_log_probs = torch.log(rotation_pred_probs + 1e-10)
-        rotation_log_probs = torch.sum(
-            F.one_hot(rotation_action_tensor, num_classes=self.rotation_actions) * rotation_pred_log_probs, dim=-1
-        )
+            # Compute predicted log probabilities for x position actions
+            x_position_pred_probs = self(x_position_observation_tensor, act=1)
+            x_position_pred_log_probs = torch.log(x_position_pred_probs + 1e-10)
+            x_position_log_probs = torch.sum(
+                F.one_hot(x_position_action_tensor, num_classes=self.position_actions) * x_position_pred_log_probs, dim=-1
+            )
 
-        # Reshape and concatenate log probabilities
-        log_probs = torch.cat([panel_log_probs.unsqueeze(-1), x_position_log_probs.unsqueeze(-1), 
-                               y_position_log_probs.unsqueeze(-1), rotation_log_probs.unsqueeze(-1)], dim=-1)
-        log_probs = log_probs.view(-1)
+            # Compute predicted log probabilities for y position actions
+            y_position_pred_probs = self(y_position_observation_tensor, act=2)
+            y_position_pred_log_probs = torch.log(y_position_pred_probs + 1e-10)
+            y_position_log_probs = torch.sum(
+                F.one_hot(y_position_action_tensor, num_classes=self.position_actions) * y_position_pred_log_probs, dim=-1
+            )
 
-        # Calculate the loss
-        ratio = torch.exp(log_probs - logprob_tensor)
-        min_advantage = torch.where(
-            advantage_tensor > 0,
-            (1 + clip_ratio) * advantage_tensor,
-            (1 - clip_ratio) * advantage_tensor
-        )
-        policy_loss = -torch.mean(torch.min(ratio * advantage_tensor, min_advantage))
+            rotation_pred_probs = self(rotation_observation_tensor, act=3)
+            rotation_pred_log_probs = torch.log(rotation_pred_probs + 1e-10)
+            rotation_log_probs = torch.sum(
+                F.one_hot(rotation_action_tensor, num_classes=self.rotation_actions) * rotation_pred_log_probs, dim=-1
+            )
+
+            # Reshape and concatenate log probabilities
+            log_probs = torch.cat([panel_log_probs.unsqueeze(-1), x_position_log_probs.unsqueeze(-1), 
+                                y_position_log_probs.unsqueeze(-1), rotation_log_probs.unsqueeze(-1)], dim=-1)
+            log_probs = log_probs.view(-1)
+
+            # Calculate the loss
+            ratio = torch.exp(log_probs - logprob_tensor)
+            min_advantage = torch.where(
+                advantage_tensor > 0,
+                (1 + clip_ratio) * advantage_tensor,
+                (1 - clip_ratio) * advantage_tensor
+            )
+            policy_loss = -torch.mean(torch.min(ratio * advantage_tensor, min_advantage))
 
         # Calculate gradients and update the policy
-        self.optimizer.zero_grad()
-        policy_loss.backward()
-        self.optimizer.step()
+        # self.optimizer.zero_grad()
+        # policy_loss.backward()
+        # self.optimizer.step()
+        self.scaler.scale(policy_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+
+        self.scheduler.step()
 
         # Calculate the KL divergence
         kl = torch.mean(logprob_tensor - log_probs)
@@ -164,21 +186,26 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.state_dim = 4 * num_components
         self.num_objectives = 5 # 5 now after making overlap a constraint
-        self.dense_dim = 128
+        self.dense_dim = 512
+        self.scaler = GradScaler('cuda')
         # self.dense_dim = 32
 
         # MLP
         self.input_layer = nn.Linear(self.state_dim, self.dense_dim)
         self.input_act = nn.ReLU()
+        self.input_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_1 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_1_act = nn.ReLU()
+        self.hidden_1_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_2 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_2_act = nn.ReLU()
+        self.hidden_2_norm = nn.LayerNorm(self.dense_dim)
 
         self.hidden_3 = nn.Linear(self.dense_dim, self.dense_dim)
         self.hidden_3_act = nn.ReLU()
+        self.hidden_3_norm = nn.LayerNorm(self.dense_dim)
 
         # Output layer
         self.output_layer = nn.Linear(self.dense_dim, self.num_objectives)
@@ -186,26 +213,33 @@ class Critic(nn.Module):
 
         # Optimizer
         self.optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.9)
+
 
     def create_transformer_block(self, dim, num_heads):
         return nn.TransformerEncoderLayer(dim, num_heads)
 
     def forward(self, inputs):
-        x = inputs
+        with autocast(device_type='cuda', dtype=torch.float16):
+            x = inputs
 
-        # Pass through MLP
-        x = self.input_layer(x)
-        x = self.input_act(x)
-        x = self.hidden_1(x)
-        x = self.hidden_1_act(x)
-        x = self.hidden_2(x)
-        x = self.hidden_2_act(x)
-        x = self.hidden_3(x)
-        x = self.hidden_3_act(x)
+            # Pass through MLP
+            x = self.input_layer(x)
+            x = self.input_act(x)
+            x = self.input_norm(x)
+            x = self.hidden_1(x)
+            x = self.hidden_1_act(x)
+            x = self.hidden_1_norm(x)
+            x = self.hidden_2(x)
+            x = self.hidden_2_act(x)
+            x = self.hidden_2_norm(x)
+            x = self.hidden_3(x)
+            x = self.hidden_3_act(x)
+            x = self.hidden_3_norm(x)
 
-        # Output
-        x = self.output_layer(x)
-        x = self.output_act(x)
+            # Output
+            x = self.output_layer(x)
+            x = self.output_act(x)
 
         return x
 
@@ -224,14 +258,22 @@ class Critic(nn.Module):
         return output_last
 
     def ppo_update(self, observation, return_buffer, weights):
-        pred_values = self(observation)
-        pred_reward = torch.sum(-pred_values * weights, dim=-1)
-        value_loss = torch.mean((return_buffer - pred_reward) ** 2)
 
         self.optimizer.zero_grad()
-        value_loss.backward()
-        self.optimizer.step()
 
+        with autocast(device_type='cuda', dtype=torch.float16):
+            pred_values = self(observation)
+            pred_reward = torch.sum(-pred_values * weights, dim=-1)
+            value_loss = torch.mean((return_buffer - pred_reward) ** 2)
+
+        # self.optimizer.zero_grad()
+        # value_loss.backward()
+        # self.optimizer.step()
+        self.scaler.scale(value_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+
+        self.scheduler.step()
 
         return value_loss.item()
 
@@ -242,8 +284,8 @@ class RLWrapper():
         epochs = 500
         num_components = len(components)
         num_panels = len(structPanels)
-        # actor, critic = get_new_models(num_components, num_panels)
-        actor, critic = get_existing_models(num_components, num_panels)
+        actor, critic = get_new_models(num_components, num_panels)
+        # actor, critic = get_existing_models(num_components, num_panels)
 
         NFE = 0
         allHV = []
@@ -309,6 +351,8 @@ def get_new_models(num_components, num_panels):
     critic = Critic(num_components=num_components).to('cuda')
 
     inputs = torch.zeros(size=(1,num_components*4)).to('cuda')
+    # actor = torch.jit.trace(actor, inputs)
+    # critic = torch.jit.trace(critic, inputs)
     actor(inputs)
     critic(inputs)
 
@@ -322,6 +366,8 @@ def get_existing_models(num_components, num_panels):
     critic.load_state_dict(torch.load('criticHRes.pth'))
 
     inputs = torch.zeros(size=(1,num_components*4)).to('cuda')
+    # actor = torch.jit.trace(actor, inputs)
+    # critic = torch.jit.trace(critic, inputs)
     actor(inputs)
     critic(inputs)
 
@@ -330,7 +376,7 @@ def get_existing_models(num_components, num_panels):
 def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, HVgrid, allHV):
     # time everything
     # t0 = time.time()
-    mini_batch_size = 64
+    mini_batch_size = 2048
     num_actions = len(components) * 4
 
     rewards = [[] for x in range(mini_batch_size)]

@@ -59,26 +59,26 @@ def main():
     #     Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5)
     # ]
 
-    componentList = [
-        Component(type="fuel tank", mass=15, dimensions=[.3,.25,.2], heatDisp=3),
-        Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
-        Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
-        Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
-        Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
-        Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
-        Component(type="antenna", mass=3.5, dimensions=[.3,.12,.1], heatDisp=8),
-        Component(type="antenna", mass=3, dimensions=[.25,.1,.08], heatDisp=7),
-        Component(type="data recorder", mass=2.5, dimensions=[.22,.18,.06], heatDisp=6),
-        Component(type="PCU", mass=6.5, dimensions=[.25,.2,.12], heatDisp=6),
-        Component(type="OBDH", mass=8, dimensions=[.22,.18,.16], heatDisp=5),
-        Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
-        Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
-        Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
-        Component(type="payload", mass=4.5, dimensions=[.28,.22,.18], heatDisp=2.8),
-        Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
-        Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
-        Component(type="battery", mass=6, dimensions=[.2,.18,.12], heatDisp=2)
-    ]
+    # componentList = [
+    #     Component(type="fuel tank", mass=15, dimensions=[.3,.25,.2], heatDisp=3),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="star tracker", mass=1.8, dimensions=[.1,.15,.12], heatDisp=1),
+    #     Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
+    #     Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.2),
+    #     Component(type="antenna", mass=3.5, dimensions=[.3,.12,.1], heatDisp=8),
+    #     Component(type="antenna", mass=3, dimensions=[.25,.1,.08], heatDisp=7),
+    #     Component(type="data recorder", mass=2.5, dimensions=[.22,.18,.06], heatDisp=6),
+    #     Component(type="PCU", mass=6.5, dimensions=[.25,.2,.12], heatDisp=6),
+    #     Component(type="OBDH", mass=8, dimensions=[.22,.18,.16], heatDisp=5),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="radiation sensor", mass=1.2, dimensions=[.1,.08,.03], heatDisp=1.3),
+    #     Component(type="payload", mass=4.5, dimensions=[.28,.22,.18], heatDisp=2.8),
+    #     Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
+    #     Component(type="solar panel", mass=1.2, dimensions=[.18,.48,.01], heatDisp=1.4),
+    #     Component(type="battery", mass=6, dimensions=[.2,.18,.12], heatDisp=2)
+    # ]
 
     # componentList = [
     #     Component(type="OBDH", mass=3, dimensions=[.24,.19,.07], heatDisp=7),
@@ -142,6 +142,70 @@ def main():
     #     Component(type="flight computer", mass=7.6, dimensions=[.22,.19,.17], heatDisp=5.7),
     #     Component(type="payload", mass=5.5, dimensions=[.3,.23,.22], heatDisp=3.4)
     # ]
+
+    componentList = [
+        Component(type="solar panel", mass=1.5, dimensions=[.2,.5,.01], heatDisp=1.5),
+        Component(type="solar panel", mass=1.6, dimensions=[.21,.52,.01], heatDisp=1.6),
+        Component(type="solar panel", mass=1.4, dimensions=[.19,.49,.01], heatDisp=1.4),
+
+        Component(type="payload", mass=6.5, dimensions=[.3,.24,.22], heatDisp=3.2),
+        Component(type="payload", mass=5.5, dimensions=[.28,.22,.2], heatDisp=3),
+
+        Component(type="transmitter", mass=3.8, dimensions=[.25,.1,.08], heatDisp=12),
+        Component(type="transmitter", mass=4.0, dimensions=[.23,.12,.09], heatDisp=11),
+
+        Component(type="receiver", mass=3.3, dimensions=[.21,.12,.05], heatDisp=9),
+        Component(type="receiver", mass=3.5, dimensions=[.22,.13,.06], heatDisp=9.5),
+
+        Component(type="antenna", mass=4.5, dimensions=[.35,.14,.12], heatDisp=9.7),
+        Component(type="antenna", mass=3.2, dimensions=[.24,.1,.08], heatDisp=8),
+        Component(type="antenna", mass=4.0, dimensions=[.34,.15,.1], heatDisp=9),
+
+        Component(type="star tracker", mass=1.7, dimensions=[.11,.13,.1], heatDisp=1.3),
+        Component(type="star tracker", mass=1.8, dimensions=[.12,.14,.11], heatDisp=1.4),
+        Component(type="star tracker", mass=1.6, dimensions=[.1,.12,.1], heatDisp=1.2),
+
+        Component(type="sun sensor", mass=1.2, dimensions=[.1,.09,.08], heatDisp=0.9),
+        Component(type="sun sensor", mass=1.1, dimensions=[.1,.08,.07], heatDisp=1),
+        Component(type="sun sensor", mass=1.3, dimensions=[.12,.1,.09], heatDisp=1.1),
+
+        Component(type="battery", mass=5.8, dimensions=[.23,.21,.13], heatDisp=2.2),
+        Component(type="battery", mass=6.0, dimensions=[.24,.22,.14], heatDisp=2.4),
+
+        Component(type="PCU", mass=7, dimensions=[.26,.2,.14], heatDisp=6.5),
+        Component(type="PCU", mass=6.5, dimensions=[.25,.19,.13], heatDisp=6.3),
+
+        Component(type="OBDH", mass=9, dimensions=[.24,.19,.16], heatDisp=5.8),
+        Component(type="OBDH", mass=8.8, dimensions=[.23,.18,.15], heatDisp=5.7),
+
+        Component(type="reaction wheel", mass=3, dimensions=[.14,.12,.1], heatDisp=3.2),
+        Component(type="reaction wheel", mass=3.2, dimensions=[.15,.13,.11], heatDisp=3.3),
+
+        Component(type="propellant tank", mass=13, dimensions=[.3,.25,.2], heatDisp=4.2),
+        Component(type="propellant tank", mass=12.5, dimensions=[.29,.24,.19], heatDisp=4.1),
+
+        Component(type="attitude thruster", mass=2.5, dimensions=[.15,.14,.12], heatDisp=4.8),
+        Component(type="attitude thruster", mass=2.7, dimensions=[.16,.15,.13], heatDisp=5),
+
+        Component(type="IMU", mass=2.5, dimensions=[.14,.12,.09], heatDisp=2.5),
+        Component(type="IMU", mass=2.4, dimensions=[.13,.11,.08], heatDisp=2.4),
+
+        Component(type="atomic clock", mass=1.8, dimensions=[.12,.11,.07], heatDisp=1.6),
+
+        Component(type="heater", mass=1.2, dimensions=[.09,.07,.05], heatDisp=1.9),
+        Component(type="heater", mass=1.3, dimensions=[.1,.08,.06], heatDisp=2),
+
+        Component(type="gyro", mass=3.1, dimensions=[.19,.13,.02], heatDisp=2.8),
+        Component(type="gyro", mass=3.0, dimensions=[.18,.12,.02], heatDisp=2.7),
+
+        Component(type="magnetometer", mass=1.4, dimensions=[.1,.12,.1], heatDisp=1.1),
+        Component(type="magnetometer", mass=1.5, dimensions=[.11,.13,.09], heatDisp=1.2),
+
+        Component(type="accelerometer", mass=1.8, dimensions=[.13,.11,.09], heatDisp=2.2),
+        Component(type="accelerometer", mass=1.7, dimensions=[.12,.1,.08], heatDisp=2.1)
+    ]
+
+
 
     # electrical ports are located on the -x side and pointing is located on the +x side, as the dimensions are defined
 
@@ -242,7 +306,7 @@ def main():
     plt.xlabel("Number of Function Evaluations")
     plt.ylabel("Hypervolume")
     plt.title("Deep RL / Genetic Algorithm Hypervolume Comparison")
-    plt.show()
+    plt.savefig("ResultGraphs/11-06-24/HypervolumeComparisonTransformer")
 
     
     fig, axs = plt.subplots(3, 2, figsize=(12, 10))  # Increase the figure width to make space for the legend
@@ -272,7 +336,7 @@ def main():
 
     # Adjust the layout to accommodate the legend
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Reduce the plot area to leave space for the legend
-    plt.show()
+    plt.savefig("ResultGraphs/11-06-24/ObjectivesComparisonTransformer")
         
 
     # GA Block
@@ -336,7 +400,7 @@ def main():
         plt.legend(proxyPointsGA, allTypesGA, loc='center left', bbox_to_anchor=(1, 0.5))
         if solutionGAIdx == 10:
             break
-    plt.show()
+        plt.savefig(f"ResultGraphs/11-06-24/GAConfig_{solutionGAIdx}Transformer")
 
     # RL Block
     # HVgridRL.filterParetoFront(0,0.01)
@@ -398,7 +462,7 @@ def main():
         plt.legend(proxyPointsRL, allTypesRL, loc='center left', bbox_to_anchor=(1, 0.5))
         if solutionGAIdx == 10:
             break
-    plt.show()
+        plt.savefig(f"ResutlGraphs/11-06-24/RLConfig_{solutionRLIdx}Transformer")
 
 
 if __name__ == "__main__":

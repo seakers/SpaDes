@@ -63,5 +63,3 @@ def getOrientation(orientationChoice):
         transMat[i] = transMatPos*np.sign(coord[i])
 
     return transMat
-
-
