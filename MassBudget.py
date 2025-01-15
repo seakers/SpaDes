@@ -100,10 +100,11 @@ def massBudget(payloads,mission,spacecraft,compInstance,ADCSData,GSData,LVData):
     commsMass, commsComps = designComms(payloads,mission,spacecraft,compInstance) # Add modulation information
     thermMass, thermComps = designThermal(spacecraft)
     LVChoice = designLV(mission,spacecraft,compInstance,LVData)
+    LAMass = designLaunchAdapter(spacecraft.dryMass)
     payloadMass = sum([payload.mass for payload in payloads])
-    newDryMass = propMass + structMass + EPSMass + ADCSMass + avMass + payloadMass + commsMass + thermMass
+    newDryMass = propMass + structMass + EPSMass + ADCSMass + avMass + payloadMass + commsMass + thermMass + LAMass
     subsMass = {"Propulsion Mass":propMass, "Structure Mass":structMass, "EPS Mass":EPSMass, "ADCS Mass":ADCSMass, "Avionics Mass":avMass, 
-                "Payload Mass":payloadMass, "Comms Mass":commsMass, "Thermal Mass":thermMass}
+                "Payload Mass":payloadMass, "Comms Mass":commsMass, "Thermal Mass":thermMass, "Launch Adapter Mass":LAMass}
     components = {"PayloadComps": payloads, "PropComps": propComps, "EPSComps": EPSComps, "ADCSComps": ADCSComps, 
                   "AvComps": avComps, "CommsComps": commsComps, "ThermComps": thermComps, "LVChoice": LVChoice}
     return newDryMass, subsMass, components

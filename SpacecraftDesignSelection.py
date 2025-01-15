@@ -19,70 +19,82 @@ def loadJSONSCDesign(jsonPath, ind):
     jsonFile = open(jsonPath)
     jsonDict = json.load(jsonFile)
 
-    payloadDict = jsonDict['payload']
-    orbitDict = jsonDict['orbit']
-
-    # import into component object
-    payloads = []
-    for payload in payloadDict:
-        payloadComp = Component(
-            type="payload",
-            mass=payload['mass'],
-            dimensions=payload['dimensions'],
-            avgPower=payload['mass'],
-            peakPower=payload['peakPower'],
-            name=payload['name'],
-            tempRange=payload['temperatureRange'],
-            resolution=payload['resolution'],
-            FOV=payload['fieldOfView']['crossTrackFieldOfView'],
-            dataRate=payload['dataRate'],
-            FOR=payload['fieldOfView']['fieldOfRegard']
-            # swathWidth=payload['swathWidth']
-            )
-        payloads.append(payloadComp)
+    satDictList = jsonDict['satellites']
+    for i, satDict in enumerate(satDictList):
     
-    # import into mission object
-    mission = Mission(
-        semiMajorAxis=orbitDict['semimajorAxis'],
-        inclination=orbitDict['inclination'],
-        eccentricity=orbitDict['eccentricity'],
-        longAscendingNode=orbitDict['rightAscensionAscendingNode'],
-        argPeriapsis=orbitDict['periapsisArgument'],
-        trueAnomaly=orbitDict['trueAnomaly'],
-        numPlanes=1,
-        numSats=1
-    )
 
-    ## Load spreadsheets containing component data
+        payloadDict = satDict['payload']
+        orbitDict = satDict['orbit']
 
-    # ADCS Components
-    reactionWheelData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Reaction Wheels')
-    CMGData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'CMG')
-    magnetorquerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetorquers')
-    starTrackerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Star Trackers')
-    sunSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Sun Sensors')
-    earthHorizonSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Earth Horizon Sensors')
-    magnetometerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetometers')
+        # import into component object
+        payloads = []
+        for payload in payloadDict:
+            payloadComp = Component(
+                type="payload",
+                mass=payload['mass'],
+                dimensions=payload['dimensions'],
+                avgPower=payload['mass'],
+                peakPower=payload['peakPower'],
+                name=payload['name'],
+                tempRange=payload['temperatureRange'],
+                resolution=payload['resolution'],
+                FOV=payload['fieldOfView']['crossTrackFieldOfView'],
+                dataRate=payload['dataRate'],
+                FOR=payload['fieldOfView']['fieldOfRegard']
+                # swathWidth=payload['swathWidth']
+                )
+            payloads.append(payloadComp)
+        
+        # import into mission object
+        mission = Mission(
+            semiMajorAxis=orbitDict['semimajorAxis'],
+            inclination=orbitDict['inclination'],
+            eccentricity=orbitDict['eccentricity'],
+            longAscendingNode=orbitDict['rightAscensionAscendingNode'],
+            argPeriapsis=orbitDict['periapsisArgument'],
+            trueAnomaly=orbitDict['trueAnomaly'],
+            numPlanes=1,
+            numSats=1
+        )
 
-    ADCSData = {"reaction wheel":reactionWheelData,"CMG":CMGData,"magnetorquer":magnetorquerData,"star tracker":starTrackerData,
-                "sun sensor":sunSensorData,"earth horizon sensor":earthHorizonSensorData,"magnetometer":magnetometerData}
+        ## Load spreadsheets containing component data
 
-    # Ground Station information
-    contacts = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Accesses')
-    downlink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Downlink')
-    uplink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Uplink')
+        # ADCS Components
+        reactionWheelData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Reaction Wheels')
+        CMGData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'CMG')
+        magnetorquerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetorquers')
+        starTrackerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Star Trackers')
+        sunSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Sun Sensors')
+        earthHorizonSensorData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Earth Horizon Sensors')
+        magnetometerData = pd.read_excel('SCDesignData/ADCSData.xlsx', 'Magnetometers')
 
-    GSData = {"contacts":contacts,"downlink":downlink,"uplink":uplink}
+        ADCSData = {"reaction wheel":reactionWheelData,"CMG":CMGData,"magnetorquer":magnetorquerData,"star tracker":starTrackerData,
+                    "sun sensor":sunSensorData,"earth horizon sensor":earthHorizonSensorData,"magnetometer":magnetometerData}
 
-    # launch vehicle data
-    LVData = pd.read_excel('SCDesignData/LaunchVehicleData.xlsx', 'Launch Vehicles')
+        # Ground Station information
+        contacts = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Accesses')
+        downlink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Downlink')
+        uplink = pd.read_excel('SCDesignData/Ground Contacts.xlsx', 'Uplink')
+
+        GSData = {"contacts":contacts,"downlink":downlink,"uplink":uplink}
+
+        # launch vehicle data
+        LVData = pd.read_excel('SCDesignData/LaunchVehicleData.xlsx', 'Launch Vehicles')
 
 
-    scMass, subsMass, components = iterativeDesign(payloads, mission, ADCSData, GSData, LVData)
+        scMass, subsMass, components = iterativeDesign(payloads, mission, ADCSData, GSData, LVData)
+        jsonDict['satellites'][i]['mass'] = scMass
+        jsonDict['satellites'][i]['subsystemMasses'] = subsMass
+        coverageRequestJSONFile = coverageRequestJSON(payloads, mission, ind)
+
 
     costEstimationJSONFile = costEstimationJSON(payloads, mission, scMass, subsMass, components, ind)
 
-    coverageRequestJSONFile = coverageRequestJSON(payloads, mission, ind)
+    
+
+    jsonFile = json.dumps(jsonDict, indent=4)
+    with open(jsonPath, 'w') as outfile:
+        outfile.write(jsonFile)
 
     # scienceRequestJSONFile = scienceRequestJSON(jsonDict)
 

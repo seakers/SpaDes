@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import itertools
+import pandas as pd
+import re
 from MassBudget import *
 from OrbitCalculations import *
 from DeltaVBudget import *
@@ -12,13 +14,62 @@ from CostEstimationJSON import loadJSONCostEstimationSingle
 from CallCoverageAnalysis import tatcCovReqTransformer
 from TestScienceCalc import testScienceCalc
 
-def getMissionDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly, FOR, instrumentName, instruments):
+def getSatelliteDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly, FOR, instrumentNames, instruments):
     """
     Returns a dictionary of the mission parameters
     """
-    instrumentDict = instruments[instrumentName]
+    
     # just one sat rn
-    missionDict = {
+    payloadDictList = []
+    for name in instrumentNames:
+        instrumentDict = instruments[name]
+        payloadDict = {
+            "scanTechnique": "PUSHBROOM",
+            "numberOfDetectorsRowsAlongTrack": None,
+            "numberOfDetectorsColsCrossTrack": None,
+            "Fnum": None,
+            "focalLength": None,
+            "apertureDia": None,
+            "operatingWavelength": None,
+            "bandwidth": None,
+            "opticsSysEff": None,
+            "quantumEff": None,
+            "numOfReadOutE": None,
+            "targetBlackBodyTemp": float(np.mean(instrumentDict["tempRange"])),
+            "temperatureRange": instrumentDict["tempRange"],
+            "detectorWidth": None,
+            "maxDetectorExposureTime": None,
+            "snrThreshold": None,
+            "name": name,
+            "acronym": name,
+            "mass": instrumentDict["mass"],
+            "dimensions": instrumentDict["dimensions"],
+            "volume": float(np.prod(instrumentDict["dimensions"])),
+            "power": instrumentDict["avgPower"],
+            "peakPower": instrumentDict["peakPower"],
+            "resolution": instrumentDict["resolution"],
+            "orientation": {
+                "convention": "SIDE_LOOK",
+                "sideLookAngle": None,
+                "@type": "Orientation"
+            },
+            "fieldOfView": {
+                "sensorGeometry": "RECTANGULAR",
+                "fullConeAngle": None,
+                "alongTrackFieldOfView": None,
+                "crossTrackFieldOfView": instrumentDict["FOV"],
+                "fieldOfRegard": FOR,
+                "@type": "FieldOfView"
+            },
+            "dataRate": instrumentDict["dataRate"],
+            "bitsPerPixel": None,
+            "techReadinessLevel": None,
+            "mountType": "BODY",
+            "@type": "Passive Optical Scanner"
+        }
+        payloadDictList.append(payloadDict)
+
+    satDict = {
         "@type": "Satellite",
         "@id": "sat-0",
         "name": "MicroMAS-2",
@@ -30,52 +81,7 @@ def getMissionDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, 
         "commBand": [
             "X"
         ],
-        "payload": [
-            {
-                "scanTechnique": "PUSHBROOM",
-                "numberOfDetectorsRowsAlongTrack": None,
-                "numberOfDetectorsColsCrossTrack": None,
-                "Fnum": None,
-                "focalLength": None,
-                "apertureDia": None,
-                "operatingWavelength": None,
-                "bandwidth": None,
-                "opticsSysEff": None,
-                "quantumEff": None,
-                "numOfReadOutE": None,
-                "targetBlackBodyTemp": float(np.mean(instrumentDict["tempRange"])),
-                "temperatureRange": instrumentDict["tempRange"],
-                "detectorWidth": None,
-                "maxDetectorExposureTime": None,
-                "snrThreshold": None,
-                "name": instrumentName,
-                "acronym": instrumentName,
-                "mass": instrumentDict["mass"],
-                "dimensions": instrumentDict["dimensions"],
-                "volume": float(np.prod(instrumentDict["dimensions"])),
-                "power": instrumentDict["avgPower"],
-                "peakPower": instrumentDict["peakPower"],
-                "resolution": instrumentDict["resolution"],
-                "orientation": {
-                    "convention": "SIDE_LOOK",
-                    "sideLookAngle": None,
-                    "@type": "Orientation"
-                },
-                "fieldOfView": {
-                    "sensorGeometry": "RECTANGULAR",
-                    "fullConeAngle": None,
-                    "alongTrackFieldOfView": None,
-                    "crossTrackFieldOfView": instrumentDict["FOV"],
-                    "fieldOfRegard": FOR,
-                    "@type": "FieldOfView"
-                },
-                "dataRate": instrumentDict["dataRate"],
-                "bitsPerPixel": None,
-                "techReadinessLevel": None,
-                "mountType": "BODY",
-                "@type": "Passive Optical Scanner"
-            }
-        ],
+        "payload": payloadDictList,
         "orbit": {
             "@type": "Orbit",
             "orbitType": "KEPLERIAN",
@@ -94,12 +100,38 @@ def getMissionDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, 
         "stabilizationType": "AXIS_3"
     }
 
-    return missionDict
+    return satDict
+
+
+def getMissionDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly, FOR, instrumentNames, instruments, numPlanes, numSats):
+
+    satDictList = []
+    for i in range(numSats):
+        satDict = getSatelliteDict(semiMajorAxis, inclination, eccentricity, longAscendingNode, argPeriapsis, trueAnomaly+30*i, FOR, instrumentNames[i], instruments)
+        satDictList.append(satDict)
+
+    constDict = {
+      "@type": "Constellation",
+      "@id": "con-0",
+      "constellationType": "DELTA_HOMOGENEOUS",
+      "numberSatellites": numSats,
+      "numberPlanes": numPlanes,
+      "relativeSpacing": 0,
+      "satellites": satDictList
+    }
+    return constDict
 
 def payloadMissionFFE(instruments, instrumentNames, altitudes, inclinations):
     """
     Performs a full factorial enumeration of the payload and mission options
     """
+    numSats = 4
+    numPlanes = 1
+
+    # namesCombList = itertools.combinations(instrumentNames, 2)
+    # twoSatsNamesCombList = itertools.combinations(namesCombList, numSats)
+    satInstruments = [[instrumentNames,instrumentNames,instrumentNames,instrumentNames]]
+
     rad = 6371 # km
     semiMajorAxes = [x+rad for x in altitudes] # km
     eccentricites = [0]
@@ -111,10 +143,10 @@ def payloadMissionFFE(instruments, instrumentNames, altitudes, inclinations):
     allMissionCosts = []
     allScienceScores = []
 
-    fullFactEnum = itertools.product(semiMajorAxes,inclinations,eccentricites,longAscendingNodes,argPeriapses,trueAnomalies,FOR,instrumentNames)
+    fullFactEnum = itertools.product(semiMajorAxes,inclinations,eccentricites,longAscendingNodes,argPeriapses,trueAnomalies,FOR,satInstruments)
     for ind, vals in enumerate(fullFactEnum):
 
-        SCDesignDict = getMissionDict(vals[0],vals[1],vals[2],vals[3],vals[4],vals[5],vals[6],vals[7],instruments)
+        SCDesignDict = getMissionDict(vals[0],vals[1],vals[2],vals[3],vals[4],vals[5],vals[6],vals[7],instruments,numPlanes,numSats)
 
         # Save to JSON
         SCDesignJSON = json.dumps(SCDesignDict, indent=4)
@@ -132,6 +164,8 @@ def payloadMissionFFE(instruments, instrumentNames, altitudes, inclinations):
         allMissionCosts.append(totalMissionCost)
         allScienceScores.append(scienceScore)
 
+        print("Payloads: ",vals[7], "\n")
+
         print("\nFinal Mass: ",scMass)
         print("Propulsion Mass: ",subsMass["Propulsion Mass"]," (",subsMass["Propulsion Mass"]/scMass*100,"%)")
         print("Structure Mass: ",subsMass["Structure Mass"]," (",subsMass["Structure Mass"]/scMass*100,"%)")
@@ -141,6 +175,9 @@ def payloadMissionFFE(instruments, instrumentNames, altitudes, inclinations):
         print("Payload Mass: ",subsMass["Payload Mass"]," (",subsMass["Payload Mass"]/scMass*100,"%)")
         print("Comms Mass: ",subsMass["Comms Mass"]," (",subsMass["Comms Mass"]/scMass*100,"%)")
         print("Thermal Mass: ",subsMass["Thermal Mass"]," (",subsMass["Thermal Mass"]/scMass*100,"%)\n")
+        print("Launch Adapter Mass: ",subsMass["Launch Adapter Mass"]," (",subsMass["Launch Adapter Mass"]/scMass*100,"%)")
+
+        print("Launch Vehicle: ",components["LVChoice"].name,"\nLV Cost: ",components["LVChoice"].cost,"\n")
 
         print("Total Lifecycle Cost: ", totalMissionCost)
         print("Science Score: ", scienceScore)
@@ -308,11 +345,41 @@ climateCentricInstruments = {
         "dataRate": 10,
     }
 }
+
+# climateCentricInstruments = {
+#     "DESD_LID": {
+#         "type": "payload",
+#         "mass": 200,
+#         "dimensions": [1.5, 1.5, 2],
+#         "avgPower": 500,
+#         "peakPower": 500,
+#         "name": "DESD_LID",
+#         "tempRange": [-10, 50],
+#         "resolution": 10,
+#         "FOV": 10,
+#         "specRange": "opt-NIR",
+#         "dataRate": 1,
+#     },
+#     "HYSP_TIR": {
+#         "type": "payload",
+#         "mass": 99,
+#         "dimensions": [1.2, 0.5, 0.4],
+#         "avgPower": 78,
+#         "peakPower": 78,
+#         "name": "HYSP_TIR",
+#         "tempRange": [-10, 50],
+#         "resolution": 0.0055,
+#         "FOV": 10,
+#         "specRange": "opt-TIR",
+#         "dataRate": 65,
+#     }
+# }
 climateCentricInstrumentNames = list(climateCentricInstruments.keys())
 # climateCentricAltitudes = [400, 500, 600, 700, 800]
+# climateCentricAltitudes = [400, 800, 1600]
 climateCentricAltitudes = [400]
 # climateCentricInclinations = [30, 60, 90, "SSO"]
-climateCentricInclinations = [30]
+climateCentricInclinations = [60]
 allMissionCosts, allScienceScores = payloadMissionFFE(climateCentricInstruments, climateCentricInstrumentNames, climateCentricAltitudes, climateCentricInclinations)
 
 plt.scatter(allScienceScores,allMissionCosts)

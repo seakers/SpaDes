@@ -9,3 +9,7 @@ def testScienceCalc(archPath, revisit):
     science = testApp.getArchitectureScience(archPath, revisit)
     # print(result)
     return science
+
+archPath = r"C:\Users\demagall\Documents\VS Code\Research\SpaDes\arch.json"
+science = testScienceCalc(archPath, 10)
+print(science)
