@@ -5,7 +5,8 @@ from ConfigurationCost import *
 # from RLOpt import RLWrapper
 # from RLOptPyTorch import RLWrapper
 # from RLOptPyTorchFast import RLWrapper
-from RLOptTransformer import RLWrapper
+# from RLOptTransformer import run
+import RLOptTransformer
 # from RLOptPyTorchRandomWeights import RLWrapper
 from ConfigUtils import getOrientation
 from HypervolumeUtils import HypervolumeGrid
@@ -58,11 +59,11 @@ def on_generation(ga_instance):
     avgCosts.append(genAvgCost)
     allCosts = []
 
-def GAOptimization(components,structPanels):
+def GAOptimization(components,structPanels,params):
     # uses a GA to find the optimal spacecraft configuration
     # Parameters
-    num_generations = 10 # Number of generations.
-    sol_per_pop = 128 # Number of solutions in the population.
+    num_generations = params[1] # Number of generations, is set equal to num epochs
+    sol_per_pop = 4*params[0] # Number of solutions in the population. Is set equal to batch size
 
     num_parents_mating = int(sol_per_pop/4) # Number of solutions to be selected as parents in the mating pool.
 
@@ -77,7 +78,7 @@ def GAOptimization(components,structPanels):
         elif i%4 == 3:
             gene_space[i] = np.arange(24) # for orientation
         else:
-            gene_space[i] = np.linspace(-1, 1, 201)
+            gene_space[i] = np.linspace(-1, 1, 51)
 
     parent_selection_type = "nsga2"
 
@@ -111,7 +112,62 @@ def GAOptimization(components,structPanels):
         
     return num_generations,allHV,HVgrid,avgCosts
 
-def optimization(components,structPanelList,maxCostList,optMethod):
+def randSearchCostCalc(components,structPanels,maxCostList,HVgrid,solution):
+    surfNormal = np.array([0,0,1])
+
+    for i in range(len(components)):
+        transMat = getOrientation(int(solution[4*i+3]))
+        components[i].orientation = transMat
+    
+        panelChoice = structPanels[int(solution[4*i]%len(structPanels))]
+        if solution[4*i] >= len(structPanels):
+            surfNormal = surfNormal * -1
+        
+        surfLoc = np.matmul(panelChoice.orientation,np.multiply([solution[4*i+1],solution[4*i+2],surfNormal[2]],np.array(panelChoice.dimensions)/2))
+        components[i].location = surfLoc + np.multiply(np.abs(np.matmul(transMat,np.array(components[i].dimensions)/2)),np.matmul(panelChoice.orientation,surfNormal)) + panelChoice.location
+            
+    costList = getCostComps(components,structPanels,maxCostList)
+    return costList
+
+def randomSearch(components, structPanels, maxCostList, params):
+    # Random Search
+    numRuns = params[0]*params[1]*4 # batch size * epochs
+    numBatches = params[0]*4
+    desLength = len(components)
+    numPanels = len(structPanels)
+    HVgrid = HypervolumeGrid([1,1,1,1,1]) # Only 5 to eliminate constraint (overlap cost) from HV calculation
+
+    allHV = []
+    avgCosts = []
+    tempCosts = []
+
+    # variable ranges
+    panelChoiceRange = np.arange(2*numPanels) # panel choice * 2 for each side of panel
+    orientationRange = np.arange(24) # for orientation
+    locRange = np.linspace(-1, 1, 51)
+    for i in range(numRuns):
+        solution = []
+        for j in range(desLength):
+            solution.append(np.random.choice(panelChoiceRange))
+            solution.append(np.random.choice(locRange))
+            solution.append(np.random.choice(locRange))
+            solution.append(np.random.choice(orientationRange))
+
+        costList = randSearchCostCalc(components,structPanels,maxCostList,HVgrid,solution)
+        HVCosts = costList[1:]
+        if costList[0] < 0.01:
+            HVgrid.updateHV(HVCosts,solution)
+            # print("\n\n Valid Solution Found ",i,"\n\n")
+        allHV.append(HVgrid.getHV())
+        tempCosts.append(costList)
+        if (i+1)%numBatches == 0:
+            avgCosts.append(-np.mean(np.array(tempCosts),0))
+            tempCosts = []
+        
+
+    return numRuns,allHV,HVgrid,avgCosts
+
+def optimization(components,structPanelList,maxCostList,date_str,optMethod,params):
     # Minimize the cost of the configuration
     global compList
     global maxCosts
@@ -121,10 +177,13 @@ def optimization(components,structPanelList,maxCostList,optMethod):
     structPanels = structPanelList
 
     if optMethod == "GA":
-        num_generations,allHV,HVgrid,avgCosts = GAOptimization(components,structPanels)
+        num_generations,allHV,HVgrid,avgCosts = GAOptimization(components,structPanels,params)
 
     elif optMethod == "RL":
-        num_generations,allHV,HVgrid,avgCosts = RLWrapper.run(components,structPanels,maxCostList)
+        num_generations,allHV,HVgrid,avgCosts = RLOptTransformer.run(components,structPanels,maxCostList,date_str,params)
+
+    elif optMethod == "rand":
+        num_generations,allHV,HVgrid,avgCosts = randomSearch(components,structPanelList,maxCostList,params)
 
     return num_generations,allHV,HVgrid,avgCosts
 

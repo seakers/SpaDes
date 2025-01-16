@@ -126,6 +126,15 @@ def getParetoFront(costs, return_mask = True):
         return is_efficient_mask
     else:
         return is_efficient
+    
+def mergeHV(HVgrid1, HVgrid2):
+    """
+    Merge two hypervolume grids
+    """
+    HVgrid1.dominated = np.logical_or(HVgrid1.dominated, HVgrid2.dominated)
+    for point2, solution2 in zip(HVgrid2.paretoFrontPoint, HVgrid2.paretoFrontSolution):
+        HVgrid1.updateParetoFront(point2, solution2)
+    return HVgrid1
 
 # class HypervolumeGrid:
 
