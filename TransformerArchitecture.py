@@ -1,7 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.amp import GradScaler, autocast
+# from torch.amp import autocast
+# from torch.cuda.amp import GradScaler
+from torch import autocast
+from torch.cuda.amp import GradScaler
+import math
+
 
 class CustomDecoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=64, dropout=0.1):
@@ -26,13 +31,13 @@ class CustomDecoderLayer(nn.Module):
     def forward(self, tgt, memory, tgt_mask=None, memory_mask=None, tgt_key_padding_mask=None, memory_key_padding_mask=None):
         # Self-attention layer
         # tgt2, _ = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)
-        tgt2 = F.scaled_dot_product_attention(tgt, tgt, tgt, attn_mask=tgt_mask)
+        tgt2 = F.scaled_dot_product_attention(tgt, tgt, tgt, tgt_mask)
         tgt = tgt + self.dropout1(tgt2)
         tgt = self.norm1(tgt)
 
         # Cross-attention layer
         # tgt2, _ = self.cross_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)
-        tgt2 = F.scaled_dot_product_attention(tgt, memory, memory, attn_mask=memory_mask)
+        tgt2 = F.scaled_dot_product_attention(tgt, memory, memory, memory_mask)
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)
 
@@ -55,6 +60,23 @@ class CustomTransformerDecoder(nn.Module):
             output = layer(output, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
         return output
 
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
 class Actor(nn.Module):
     def __init__(self, num_components, num_panels, device, params):
         super(Actor, self).__init__()
@@ -66,14 +88,14 @@ class Actor(nn.Module):
         self.nhead = 2
         self.dense_dim = 64  # Hidden dimension for the transformer
         self.device = device
-        self.scaler = GradScaler(self.device)
+        self.scaler = GradScaler()
         self.clip_ratio = params[2]
 
         # Input encoder (linear embedding)
         self.encoder = nn.Linear(2, self.dense_dim)
 
         # Positional encoding
-        self.positional_encoding = nn.Parameter(torch.zeros(1, self.state_dim, self.dense_dim))
+        self.positional_encoding = PositionalEncoding(d_model=self.dense_dim)
 
         # Transformer decoder layers
         # decoder_layer = nn.TransformerDecoderLayer(d_model=self.dense_dim, nhead=self.nhead, batch_first=True)
@@ -97,6 +119,7 @@ class Actor(nn.Module):
 
     def forward(self, inputs, act=0):
         with autocast(device_type=self.device.type, dtype=torch.float16):
+        # with autocast(dtype=torch.float16):
             actions = torch.fmod(torch.arange(0, inputs.size()[1]), 4) + 1
             actions = actions.repeat(inputs.size()[0], 1).to(inputs.device)  # Ensure it runs on the same device (e.g., 'cuda')
 
@@ -105,7 +128,7 @@ class Actor(nn.Module):
             x = self.encoder(x)
 
             # Add positional encoding
-            x += self.positional_encoding[:, :x.size(1), :]
+            x = self.positional_encoding(x)
 
             # Create a causal mask (prevents future information from leaking)
             seq_len = x.size(1)
@@ -150,6 +173,7 @@ class Actor(nn.Module):
 
         self.optimizer.zero_grad()
         with autocast(device_type=self.device.type, dtype=torch.float16):
+        # with autocast(dtype=torch.float16):
 
             # clip_ratio = 0.1
             
@@ -230,13 +254,13 @@ class Critic(nn.Module):
         self.num_objectives = 5  # Number of value predictions (e.g., one for each objective)
         self.nhead = 2
         self.device = device
-        self.scaler = GradScaler(self.device)
+        self.scaler = GradScaler()
 
         # Input encoder (linear embedding)
         self.encoder = nn.Linear(2, self.dense_dim)
 
         # Positional encoding
-        self.positional_encoding = nn.Parameter(torch.zeros(1, self.state_dim, self.dense_dim))
+        self.positional_encoding = PositionalEncoding(d_model=self.dense_dim)
 
         # Transformer decoder layers
         # decoder_layer = nn.TransformerDecoderLayer(d_model=self.dense_dim, nhead=8, batch_first=True)
@@ -258,6 +282,7 @@ class Critic(nn.Module):
 
     def forward(self, inputs):
         with autocast(device_type=self.device.type, dtype=torch.float16):
+        # with autocast(dtype=torch.float16):
 
             actions = torch.fmod(torch.arange(0, inputs.size()[1]), 4) + 1
             actions = actions.repeat(inputs.size()[0], 1).to(inputs.device)  # Ensure it runs on the same device (e.g., 'cuda')
@@ -267,7 +292,7 @@ class Critic(nn.Module):
             x = self.encoder(x)
 
             # Add positional encoding
-            x += self.positional_encoding[:, :x.size(1), :]
+            x = self.positional_encoding(x)
 
             # Create a causal mask (prevents future information from leaking)
             seq_len = x.size(1)
@@ -294,6 +319,7 @@ class Critic(nn.Module):
     def ppo_update(self, observation, return_buffer, weights):
         self.optimizer.zero_grad()
         with autocast(device_type=self.device.type, dtype=torch.float16):
+        # with autocast(dtype=torch.float16):
             pred_values = self(observation)
             pred_reward = torch.sum(-pred_values * weights, dim=-1)
             value_loss = torch.mean((return_buffer - pred_reward) ** 2)

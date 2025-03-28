@@ -63,7 +63,7 @@ def GAOptimization(components,structPanels,params):
     # uses a GA to find the optimal spacecraft configuration
     # Parameters
     num_generations = params[1] # Number of generations, is set equal to num epochs
-    sol_per_pop = 4*params[0] # Number of solutions in the population. Is set equal to batch size
+    sol_per_pop = params[0] # Number of solutions in the population. Is set equal to batch size
 
     num_parents_mating = int(sol_per_pop/4) # Number of solutions to be selected as parents in the mating pool.
 
@@ -131,8 +131,8 @@ def randSearchCostCalc(components,structPanels,maxCostList,HVgrid,solution):
 
 def randomSearch(components, structPanels, maxCostList, params):
     # Random Search
-    numRuns = params[0]*params[1]*4 # batch size * epochs
-    numBatches = params[0]*4
+    numRuns = params[0]*params[1] # batch size * epochs
+    numBatches = params[0]
     desLength = len(components)
     numPanels = len(structPanels)
     HVgrid = HypervolumeGrid([1,1,1,1,1]) # Only 5 to eliminate constraint (overlap cost) from HV calculation

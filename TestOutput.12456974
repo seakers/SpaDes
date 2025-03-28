@@ -1,0 +1,5 @@
+Restoring modules from user's SpaDesCollection
+Traceback (most recent call last):
+  File "/scratch/user/demagall/SpaDes/ConfigurationDesign.py", line 3, in <module>
+    import matplotlib.pyplot as plt
+ModuleNotFoundError: No module named 'matplotlib'

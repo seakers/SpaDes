@@ -65,6 +65,7 @@ class HypervolumeGrid:
         if isDominated == False:
             self.paretoFrontPoint = np.vstack([self.paretoFrontPoint, newPoint]) if self.paretoFrontPoint.size else np.array([newPoint])
             self.paretoFrontSolution = np.vstack([self.paretoFrontSolution, solution]) if self.paretoFrontSolution.size else np.array([solution])
+            # self.paretoFrontSolution = np.vstack([self.paretoFrontSolution, solution]) if self.paretoFrontSolution.size else solution
 
     def filterParetoFront(self, objInd, value):   
         """

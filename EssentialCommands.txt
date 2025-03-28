@@ -1,0 +1,12 @@
+# load modules
+module restore SpaDesCollection
+
+# activate venv
+source activate_venv SpaDesEnv
+
+# Add libraries downloaded into scratch to the venv
+export PIP_TARGET=$SCRATCH/.local/lib
+export PYTHONPATH=$PIP_TARGET:$PYTHONPATH
+
+# Add config file from scratch for matplotlibmo
+export MPLCONFIGDIR=$SCRATCH/.local/lib/matplotlib-config

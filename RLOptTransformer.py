@@ -69,6 +69,7 @@ def discounted_cumulative_sums(x, discount):
 def run_ddp(rank, world_size, components, structPanels, maxCosts, date_str, params):
 
     setup(rank, world_size)
+    params[0] = int(params[0]/world_size)
 
     # Training code here
     run_training(rank, world_size, components, structPanels, maxCosts, date_str, params)
@@ -91,9 +92,8 @@ def run_training(rank, world_size, components, structPanels, maxCosts, date_str,
     num_panels = len(structPanels)
 
     # Initialize DDP models
-    actor, critic = get_new_models(num_components, num_panels, device, params)
-    # actor = Actor(num_components, num_panels).to(device)
-    # critic = Critic().to(device)
+    actor, critic = get_models(num_components, num_panels, device, params, date_str)
+
     actor = torch.nn.parallel.DistributedDataParallel(actor, device_ids=[rank], output_device=rank)
     critic = torch.nn.parallel.DistributedDataParallel(critic, device_ids=[rank], output_device=rank)
 
@@ -118,8 +118,8 @@ def run_training(rank, world_size, components, structPanels, maxCosts, date_str,
         avgCosts.append(avgCost)
 
 
-    torch.save(actor.state_dict(), 'actorTransformer.pth')
-    torch.save(critic.state_dict(), 'criticTransformer.pth')
+    torch.save(actor.module.state_dict(), f"ResultGraphs/{date_str}/actorTransformer.pth")
+    torch.save(critic.module.state_dict(), f"ResultGraphs/{date_str}/criticTransformer.pth")
 
     # Plotting and saving results (only rank 0 to avoid duplication)
     if rank == 0:
@@ -162,38 +162,41 @@ def run_training(rank, world_size, components, structPanels, maxCosts, date_str,
     np.save(f'allDes{rank}.npy', allDes)
     np.save(f'avgCosts{rank}.npy', avgCosts)
 
-def get_new_models(num_components, num_panels, device, params):
+def get_models(num_components, num_panels, device, params, date_str):
     actor = Actor(num_components=num_components, num_panels=num_panels, device=device, params=params)
     critic = Critic(num_components=num_components, device=device, params=params)
 
     actor.to(device)
     critic.to(device)
 
+    if os.path.exists(f"ResultGraphs/{date_str}/actorTransformer.pth") and os.path.exists(f"ResultGraphs/{date_str}/criticTransformer.pth"):
+        print("\n\n Transfer Learning from Existing Models:\n\n")
+        actor.load_state_dict(torch.load(f"ResultGraphs/{date_str}/actorTransformer.pth"))
+        critic.load_state_dict(torch.load(f"ResultGraphs/{date_str}/criticTransformer.pth"))
+
     inputs = torch.zeros(size=(1,num_components*4)).to(device)
-    # actor = torch.jit.trace(actor, inputs)
-    # critic = torch.jit.trace(critic, inputs)
+
     actor(inputs)
     critic(inputs)
 
     return actor, critic
 
-def get_existing_models(num_components, num_panels, device):
-    actor = Actor(num_components=num_components, num_panels=num_panels, device=device)
-    critic = Critic(num_components=num_components, device=device)
+# def get_existing_models(num_components, num_panels, device):
+#     actor = Actor(num_components=num_components, num_panels=num_panels, device=device)
+#     critic = Critic(num_components=num_components, device=device)
 
-    actor.to(device)
-    critic.to(device)
+#     actor.to(device)
+#     critic.to(device)
 
-    actor.load_state_dict(torch.load('actor.pth'))
-    critic.load_state_dict(torch.load('critic.pth'))
+#     actor.load_state_dict(torch.load('actor.pth'))
+#     critic.load_state_dict(torch.load('critic.pth'))
 
-    inputs = torch.zeros(size=(1,num_components*4)).to(device)
-    # actor = torch.jit.trace(actor, inputs)
-    # critic = torch.jit.trace(critic, inputs)
-    actor(inputs)
-    critic(inputs)
+#     inputs = torch.zeros(size=(1,num_components*4)).to(device)
 
-    return actor, critic
+#     actor(inputs)
+#     critic(inputs)
+
+#     return actor, critic
 
 def run_epoch(actor, critic, components, structPanels, NFE, maxCosts, allDes, allCosts, device, rank, params):
     # time everything
